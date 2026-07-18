@@ -130,4 +130,19 @@ A task is complete only when:
 - Code follows project standards.
 - Project builds successfully.
 - No unrelated files are changed.
-- Changes are committed to Git.
+- Changes are committed to Git.## Completed Milestones
+
+### Sprint 1 – Foundation
+- Project setup
+- Routing
+- Shared UI
+- Dashboard foundation
+- AI engineering rules
+- Master specification
+
+### Sprint 2 – Milestone 1
+- Branch Management Foundation
+- Branch List
+- Branch Details
+- Route parameter navigation
+- Extended Branch domain model
