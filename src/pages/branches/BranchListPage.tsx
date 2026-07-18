@@ -117,7 +117,8 @@ export default function BranchListPage() {
               },
               {
                 header: "Liquidity",
-                render: (branch) => `${branch.liquidity.toLocaleString()} SDG`,
+                render: (branch) =>
+                  `${branch.liquidity.availableLiquidity.toLocaleString()} SDG`,
               },
               {
                 header: "Status",

@@ -1,8 +1,13 @@
 import MainLayout from "../../layouts/MainLayout";
 import PageContainer from "../../components/PageContainer";
 import BranchStatusTable from "../../components/dashboard/BranchStatusTable";
+import Card from "../../components/ui/Card";
+import { branches, getDashboardLiquiditySummary } from "../../services/branchService";
 
 export default function Dashboard() {
+  const liquiditySummary = getDashboardLiquiditySummary();
+  const totalFilesReady = branches.reduce((sum, branch) => sum + branch.filesReady, 0);
+
   return (
     <MainLayout>
       <PageContainer title="Operations Controller Dashboard">
@@ -14,52 +19,33 @@ export default function Dashboard() {
             marginBottom: "30px",
           }}
         >
-          <Card title="Files Ready" value="146" />
-          <Card title="Available Liquidity" value="248,000,000 SDG" />
-          <Card title="Available Accounts" value="17.62" />
-          <Card title="Waiting Funding" value="3 Branches" />
+          <Card title="Files Ready">
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F" }}>
+              {totalFilesReady}
+            </div>
+          </Card>
+
+          <Card title="Available Liquidity">
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F" }}>
+              {liquiditySummary.totalAvailableLiquidity.toLocaleString()} SDG
+            </div>
+          </Card>
+
+          <Card title="Liquidity Alerts">
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F" }}>
+              {liquiditySummary.branchesBelowThreshold} Branches
+            </div>
+          </Card>
+
+          <Card title="Critical Branches">
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F" }}>
+              {liquiditySummary.criticalBranches} Branches
+            </div>
+          </Card>
         </div>
 
         <BranchStatusTable />
       </PageContainer>
     </MainLayout>
-  );
-}
-
-type CardProps = {
-  title: string;
-  value: string;
-};
-
-function Card({ title, value }: CardProps) {
-  return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        borderRadius: 12,
-        padding: 24,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-      }}
-    >
-      <div
-        style={{
-          color: "#6B7280",
-          marginBottom: 10,
-          fontSize: 14,
-        }}
-      >
-        {title}
-      </div>
-
-      <div
-        style={{
-          fontSize: 28,
-          fontWeight: "bold",
-          color: "#1E3A5F",
-        }}
-      >
-        {value}
-      </div>
-    </div>
   );
 }

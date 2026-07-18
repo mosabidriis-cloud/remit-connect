@@ -3,6 +3,20 @@ export type BranchStatus =
   | "Funding Soon"
   | "Urgent Funding";
 
+export type LiquidityHealth = "Healthy" | "Warning" | "Critical";
+export type LiquidityAlertLevel = "None" | "Warning" | "Critical";
+
+export interface BranchLiquidity {
+  usdBalance: number;
+  sdgBalance: number;
+  liquidityLimit: number;
+  minimumThreshold: number;
+  availableLiquidity: number;
+  health: LiquidityHealth;
+  isBelowThreshold: boolean;
+  alertLevel: LiquidityAlertLevel;
+}
+
 export interface Branch {
   id: number;
   code: string;
@@ -12,13 +26,10 @@ export interface Branch {
   state: string;
   phone: string;
   email?: string;
-  liquidity: number;
+  liquidity: BranchLiquidity;
   availableAccounts: number;
   filesReady: number;
   status: BranchStatus;
-  usdBalance: number;
-  sdgBalance: number;
-  liquidityLimit: number;
   services: string[];
   lastUpdated: string;
   active: boolean;

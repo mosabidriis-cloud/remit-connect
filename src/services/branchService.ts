@@ -1,6 +1,65 @@
-import type { Branch, BranchStatus } from "../types/Branch";
+import type {
+  Branch,
+  BranchLiquidity,
+  BranchStatus,
+  LiquidityHealth,
+} from "../types/Branch";
 
-export const branches: Branch[] = [
+type BranchSeed = Omit<Branch, "liquidity"> & {
+  usdBalance: number;
+  sdgBalance: number;
+  liquidityLimit: number;
+};
+
+function buildBranchLiquidity(
+  usdBalance: number,
+  sdgBalance: number,
+  liquidityLimit: number
+): BranchLiquidity {
+  const safeUsdBalance = Math.max(0, usdBalance);
+  const safeSdgBalance = Math.max(0, sdgBalance);
+  const safeLiquidityLimit = Math.max(0, liquidityLimit);
+  const availableLiquidity = safeSdgBalance;
+  const minimumThreshold =
+    safeLiquidityLimit > 0 ? safeLiquidityLimit * 0.7 : 0;
+  const percentage =
+    safeLiquidityLimit > 0 ? (availableLiquidity / safeLiquidityLimit) * 100 : 0;
+
+  let health: LiquidityHealth = "Healthy";
+  if (percentage < 40) {
+    health = "Critical";
+  } else if (percentage < 70) {
+    health = "Warning";
+  }
+
+  const isBelowThreshold = availableLiquidity < minimumThreshold;
+  const alertLevel =
+    !isBelowThreshold ? "None" : health === "Critical" ? "Critical" : "Warning";
+
+  return {
+    usdBalance: safeUsdBalance,
+    sdgBalance: safeSdgBalance,
+    liquidityLimit: safeLiquidityLimit,
+    minimumThreshold,
+    availableLiquidity,
+    health,
+    isBelowThreshold,
+    alertLevel,
+  };
+}
+
+function createBranch(seed: BranchSeed): Branch {
+  return {
+    ...seed,
+    liquidity: buildBranchLiquidity(
+      seed.usdBalance,
+      seed.sdgBalance,
+      seed.liquidityLimit
+    ),
+  };
+}
+
+const branchSeeds: BranchSeed[] = [
   {
     id: 1,
     code: "PS-001",
@@ -10,7 +69,6 @@ export const branches: Branch[] = [
     state: "Red Sea",
     phone: "+249 912 345 678",
     email: "port.sudan@remitconnect.sd",
-    liquidity: 45000000,
     availableAccounts: 3.0,
     filesReady: 24,
     status: "Ready",
@@ -30,7 +88,6 @@ export const branches: Branch[] = [
     state: "River Nile",
     phone: "+249 911 222 333",
     email: "shandi@remitconnect.sd",
-    liquidity: 18000000,
     availableAccounts: 1.2,
     filesReady: 14,
     status: "Funding Soon",
@@ -50,7 +107,6 @@ export const branches: Branch[] = [
     state: "Northern",
     phone: "+249 918 555 444",
     email: "dongola@remitconnect.sd",
-    liquidity: 7000000,
     availableAccounts: 0.47,
     filesReady: 11,
     status: "Urgent Funding",
@@ -70,7 +126,6 @@ export const branches: Branch[] = [
     state: "Kassala",
     phone: "+249 915 777 888",
     email: "kassala@remitconnect.sd",
-    liquidity: 36000000,
     availableAccounts: 2.4,
     filesReady: 19,
     status: "Ready",
@@ -90,7 +145,6 @@ export const branches: Branch[] = [
     state: "River Nile",
     phone: "+249 912 444 111",
     email: "atbara@remitconnect.sd",
-    liquidity: 25000000,
     availableAccounts: 1.67,
     filesReady: 9,
     status: "Funding Soon",
@@ -110,7 +164,6 @@ export const branches: Branch[] = [
     state: "White Nile",
     phone: "+249 913 666 777",
     email: "alwady@remitconnect.sd",
-    liquidity: 52000000,
     availableAccounts: 3.47,
     filesReady: 6,
     status: "Ready",
@@ -130,7 +183,6 @@ export const branches: Branch[] = [
     state: "North Kordofan",
     phone: "+249 917 333 222",
     email: "hasahessa@remitconnect.sd",
-    liquidity: 12000000,
     availableAccounts: 0.8,
     filesReady: 16,
     status: "Urgent Funding",
@@ -150,7 +202,6 @@ export const branches: Branch[] = [
     state: "Gadaref",
     phone: "+249 911 999 000",
     email: "gadaref@remitconnect.sd",
-    liquidity: 30000000,
     availableAccounts: 2.0,
     filesReady: 13,
     status: "Funding Soon",
@@ -170,7 +221,6 @@ export const branches: Branch[] = [
     state: "Gazira",
     phone: "+249 914 121 212",
     email: "madani@remitconnect.sd",
-    liquidity: 47000000,
     availableAccounts: 3.13,
     filesReady: 18,
     status: "Ready",
@@ -190,7 +240,6 @@ export const branches: Branch[] = [
     state: "White Nile",
     phone: "+249 911 767 676",
     email: "kosti@remitconnect.sd",
-    liquidity: 9000000,
     availableAccounts: 0.6,
     filesReady: 8,
     status: "Urgent Funding",
@@ -210,7 +259,6 @@ export const branches: Branch[] = [
     state: "North Kordofan",
     phone: "+249 918 444 555",
     email: "obaied@remitconnect.sd",
-    liquidity: 21000000,
     availableAccounts: 1.4,
     filesReady: 15,
     status: "Funding Soon",
@@ -230,7 +278,6 @@ export const branches: Branch[] = [
     state: "Sennar",
     phone: "+249 912 876 543",
     email: "sennar@remitconnect.sd",
-    liquidity: 41000000,
     availableAccounts: 2.73,
     filesReady: 10,
     status: "Ready",
@@ -242,6 +289,8 @@ export const branches: Branch[] = [
     active: true,
   },
 ];
+
+export const branches: Branch[] = branchSeeds.map((branch) => createBranch(branch));
 
 export function filterBranches(
   query: string,
@@ -260,4 +309,38 @@ export function filterBranches(
 
     return matchesStatus && matchesQuery;
   });
+}
+
+export interface DashboardLiquiditySummary {
+  totalAvailableLiquidity: number;
+  totalUsdBalance: number;
+  totalFilesReady: number;
+  branchesBelowThreshold: number;
+  criticalBranches: number;
+}
+
+export function getDashboardLiquiditySummary(
+  branchData: Branch[] = branches
+): DashboardLiquiditySummary {
+  return {
+    totalAvailableLiquidity: branchData.reduce(
+      (sum, branch) => sum + branch.liquidity.availableLiquidity,
+      0
+    ),
+    totalUsdBalance: branchData.reduce(
+      (sum, branch) => sum + branch.liquidity.usdBalance,
+      0
+    ),
+    totalFilesReady: branchData.reduce((sum, branch) => sum + branch.filesReady, 0),
+    branchesBelowThreshold: branchData.filter(
+      (branch) => branch.liquidity.isBelowThreshold
+    ).length,
+    criticalBranches: branchData.filter(
+      (branch) => branch.liquidity.health === "Critical"
+    ).length,
+  };
+}
+
+export function getBranchById(branchId: number): Branch | undefined {
+  return branches.find((branch) => branch.id === branchId);
 }

@@ -16,12 +16,11 @@ export default function BranchStatusTable() {
         {
           header: "Liquidity",
           render: (branch) =>
-            `${branch.liquidity.toLocaleString()} SDG`,
+            `${branch.liquidity.availableLiquidity.toLocaleString()} SDG`,
         },
         {
           header: "Available Accounts",
-          render: (branch) =>
-            branch.availableAccounts.toFixed(2),
+          render: (branch) => branch.availableAccounts.toFixed(2),
         },
         {
           header: "Files Ready",

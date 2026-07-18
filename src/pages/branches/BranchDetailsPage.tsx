@@ -3,11 +3,11 @@ import PageContainer from "../../components/PageContainer";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { useParams, Link } from "react-router-dom";
-import { branches } from "../../services/branchService";
+import { getBranchById } from "../../services/branchService";
 
 export default function BranchDetailsPage() {
   const { branchId } = useParams();
-  const branch = branches.find((item) => item.id === Number(branchId));
+  const branch = getBranchById(Number(branchId));
 
   if (!branch) {
     return (
@@ -113,21 +113,45 @@ export default function BranchDetailsPage() {
               }}
             >
               <div>
+                <div style={{ color: "#64748B", fontSize: 13 }}>Available Liquidity</div>
+                <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
+                  {branch.liquidity.availableLiquidity.toLocaleString()} SDG
+                </div>
+              </div>
+              <div>
                 <div style={{ color: "#64748B", fontSize: 13 }}>USD Balance</div>
                 <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
-                  {branch.usdBalance.toLocaleString()} USD
+                  {branch.liquidity.usdBalance.toLocaleString()} USD
                 </div>
               </div>
               <div>
                 <div style={{ color: "#64748B", fontSize: 13 }}>SDG Balance</div>
                 <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
-                  {branch.sdgBalance.toLocaleString()} SDG
+                  {branch.liquidity.sdgBalance.toLocaleString()} SDG
                 </div>
               </div>
               <div>
                 <div style={{ color: "#64748B", fontSize: 13 }}>Liquidity Limit</div>
                 <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
-                  {branch.liquidityLimit.toLocaleString()} SDG
+                  {branch.liquidity.liquidityLimit.toLocaleString()} SDG
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#64748B", fontSize: 13 }}>Minimum Threshold</div>
+                <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
+                  {branch.liquidity.minimumThreshold.toLocaleString()} SDG
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#64748B", fontSize: 13 }}>Liquidity Health</div>
+                <div style={{ fontWeight: 700, color: "#123A5F", marginTop: 4 }}>
+                  {branch.liquidity.health}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: "#64748B", fontSize: 13 }}>Alert Level</div>
+                <div style={{ fontWeight: 700, color: "#123A73", marginTop: 4 }}>
+                  {branch.liquidity.alertLevel}
                 </div>
               </div>
             </div>
