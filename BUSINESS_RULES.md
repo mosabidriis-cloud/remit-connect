@@ -284,3 +284,39 @@ REOS follows these principles:
 - Executive Dashboard
 - Notifications & Alerts
 - Workflow & Approvals
+## Treasury Risk Management
+
+### SDG Exposure Policy
+
+Cash held in SDG is considered a risk exposure.
+
+Objective:
+- Minimize idle SDG balances across all branches.
+- Maximize productive use of available SDG liquidity.
+
+### Branch Cash Limit
+
+Target end-of-day SDG balance per branch:
+
+- Preferred: ≤ 10,000,000 SDG
+- Maximum: 15,000,000 SDG
+
+Branches exceeding 15,000,000 SDG are considered overfunded.
+
+### System Actions
+
+When a branch exceeds the maximum SDG balance:
+
+- Flag the branch as "Excess SDG".
+- Show a Treasury alert on the dashboard.
+- Increase the branch's priority for funding outbound transactions.
+- Prioritize assigning new outward transaction files to consume the excess SDG.
+- Continue prioritizing the branch until its balance returns below the preferred threshold.
+
+### Dashboard Indicators
+
+Display:
+- Branches with Excess SDG
+- Total Excess SDG
+- Branch Priority Score
+- Recommended branches for new transaction allocation

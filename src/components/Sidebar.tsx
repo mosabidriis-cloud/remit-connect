@@ -25,6 +25,11 @@ export default function Sidebar() {
       icon: "🏛️",
     },
     {
+      title: "Funding Requests",
+      path: "/funding-requests",
+      icon: "💸",
+    },
+    {
       title: "Reports",
       path: "/reports",
       icon: "📈",
