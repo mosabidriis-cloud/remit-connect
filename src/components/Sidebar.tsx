@@ -20,6 +20,11 @@ export default function Sidebar() {
       icon: "📁",
     },
     {
+      title: "Treasury",
+      path: "/treasury",
+      icon: "🏛️",
+    },
+    {
       title: "Reports",
       path: "/reports",
       icon: "📈",
