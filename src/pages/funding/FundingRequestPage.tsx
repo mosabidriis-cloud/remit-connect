@@ -8,17 +8,17 @@ import DataTable from "../../components/ui/DataTable";
 import {
   advanceFundingRequest,
   cancelFundingRequest,
+  getBranchPrioritySnapshot,
   getFundingHistory,
   getFundingRequestSummary,
   getFundingRequests,
-  getBranchPrioritySnapshot,
 } from "../../services/fundingRequestService";
-import type { FundingHistoryEntry } from "../../types/FundingRequest";
+import type { FundingHistoryEntry, FundingRequest } from "../../types/FundingRequest";
 
 export default function FundingRequestPage() {
   const [requests, setRequests] = useState(getFundingRequests());
   const [history, setHistory] = useState(getFundingHistory());
-  const summary = useMemo(() => getFundingRequestSummary(), []);
+  const summary = useMemo(() => getFundingRequestSummary(), [requests]);
 
   function refreshState() {
     setRequests(getFundingRequests());
@@ -72,82 +72,93 @@ export default function FundingRequestPage() {
         </div>
 
         <Card title="Funding Requests">
-          <div style={{ display: "grid", gap: 12 }}>
-            {requests.map((request) => {
-              const prioritySnapshot = getBranchPrioritySnapshot(request.branchId);
+          <DataTable<FundingRequest>
+            data={requests}
+            columns={[
+              {
+                header: "Branch",
+                render: (request) => request.branchName,
+              },
+              {
+                header: "Requested Amount",
+                render: (request) => `${request.requestedAmount.toLocaleString()} ${request.currency}`,
+              },
+              {
+                header: "Sent Amount",
+                render: (request) => `${request.sentAmount.toLocaleString()} ${request.currency}`,
+              },
+              {
+                header: "Received Amount",
+                render: (request) => `${request.receivedAmount.toLocaleString()} ${request.currency}`,
+              },
+              {
+                header: "Available Amount",
+                render: (request) => `${request.availableAmount.toLocaleString()} ${request.currency}`,
+              },
+              {
+                header: "Variance",
+                render: (request) => `${request.variance.toLocaleString()} ${request.currency}`,
+              },
+              {
+                header: "Status",
+                render: (request) => request.status,
+              },
+              {
+                header: "Actions",
+                render: (request) => {
+                  const prioritySnapshot = getBranchPrioritySnapshot(request.branchId);
 
-              return (
-                <div
-                  key={request.id}
-                  style={{
-                    border: "1px solid #E5E7EB",
-                    borderRadius: 10,
-                    padding: 16,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, color: "#123A73" }}>{request.branchName}</div>
-                    <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>
-                      {request.reference} • {request.requestedAmount.toLocaleString()} {request.currency}
+                  return (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <span
+                        style={{
+                          background:
+                            request.status === "Available"
+                              ? "#16A34A"
+                              : request.status === "Cancelled"
+                              ? "#DC2626"
+                              : request.status === "Sent"
+                              ? "#F59E0B"
+                              : "#64748B",
+                          color: "#FFFFFF",
+                          padding: "6px 12px",
+                          borderRadius: 20,
+                          fontWeight: 600,
+                          fontSize: 13,
+                        }}
+                      >
+                        {request.status}
+                      </span>
+
+                      {request.status === "Pending" && (
+                        <Button onClick={() => handleAdvance(request.id, "Sent")}>Send</Button>
+                      )}
+
+                      {request.status === "Sent" && (
+                        <Button onClick={() => handleAdvance(request.id, "Received")}>Receive</Button>
+                      )}
+
+                      {request.status === "Received" && (
+                        <Button onClick={() => handleAdvance(request.id, "Available")}>Available</Button>
+                      )}
+
+                      {request.status !== "Cancelled" && request.status !== "Available" && (
+                        <Button onClick={() => handleCancel(request.id)} variant="danger">
+                          Cancel
+                        </Button>
+                      )}
+
+                      {prioritySnapshot.recommendedForOutwardAllocation && (
+                        <span style={{ color: "#1E5AA8", fontSize: 13, fontWeight: 600 }}>
+                          Recommended
+                        </span>
+                      )}
                     </div>
-                    <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>
-                      Status: {request.status}
-                    </div>
-                    {prioritySnapshot.recommendedForOutwardAllocation && (
-                      <div style={{ color: "#1E5AA8", fontSize: 13, marginTop: 6, fontWeight: 600 }}>
-                        Recommended for future outward transaction allocation
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <span
-                      style={{
-                        background:
-                          request.status === "Available"
-                            ? "#16A34A"
-                            : request.status === "Cancelled"
-                            ? "#DC2626"
-                            : request.status === "Sent"
-                            ? "#F59E0B"
-                            : "#64748B",
-                        color: "#FFFFFF",
-                        padding: "6px 12px",
-                        borderRadius: 20,
-                        fontWeight: 600,
-                        fontSize: 13,
-                      }}
-                    >
-                      {request.status}
-                    </span>
-
-                    {request.status === "Pending" && (
-                      <Button onClick={() => handleAdvance(request.id, "Sent")}>Send</Button>
-                    )}
-
-                    {request.status === "Sent" && (
-                      <Button onClick={() => handleAdvance(request.id, "Received")}>Receive</Button>
-                    )}
-
-                    {request.status === "Received" && (
-                      <Button onClick={() => handleAdvance(request.id, "Available")}>Available</Button>
-                    )}
-
-                    {request.status !== "Cancelled" && request.status !== "Available" && (
-                      <Button onClick={() => handleCancel(request.id)} variant="danger">
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                },
+              },
+            ]}
+          />
         </Card>
 
         <div style={{ marginTop: 24 }}>

@@ -1,5 +1,11 @@
 import type { Branch } from "../types/Branch";
-import type { FundingHistoryEntry, FundingRequest, FundingRequestStatus, FundingRequestSummary } from "../types/FundingRequest";
+import type {
+  FundingDashboardMetrics,
+  FundingHistoryEntry,
+  FundingRequest,
+  FundingRequestStatus,
+  FundingRequestSummary,
+} from "../types/FundingRequest";
 
 const EXCESS_SDG_THRESHOLD = 15_000_000;
 
@@ -9,6 +15,10 @@ const fundingRequests: FundingRequest[] = [
     branchId: 3,
     branchName: "Dongola Branch",
     requestedAmount: 5_000_000,
+    sentAmount: 0,
+    receivedAmount: 0,
+    availableAmount: 0,
+    variance: 0,
     currency: "SDG",
     status: "Pending",
     requestedAt: "2026-07-18 08:30",
@@ -19,6 +29,10 @@ const fundingRequests: FundingRequest[] = [
     branchId: 7,
     branchName: "Hasahessa Branch",
     requestedAmount: 3_500_000,
+    sentAmount: 3_500_000,
+    receivedAmount: 0,
+    availableAmount: 0,
+    variance: 3_500_000,
     currency: "SDG",
     status: "Sent",
     requestedAt: "2026-07-18 07:45",
@@ -30,6 +44,10 @@ const fundingRequests: FundingRequest[] = [
     branchId: 10,
     branchName: "Kosti Branch",
     requestedAmount: 2_400_000,
+    sentAmount: 2_400_000,
+    receivedAmount: 2_400_000,
+    availableAmount: 2_400_000,
+    variance: 0,
     currency: "SDG",
     status: "Available",
     requestedAt: "2026-07-18 06:20",
@@ -37,7 +55,6 @@ const fundingRequests: FundingRequest[] = [
     receivedAt: "2026-07-18 06:40",
     confirmedAt: "2026-07-18 06:45",
     reference: "FR-1003",
-    receivedAmount: 2_400_000,
   },
 ];
 
@@ -138,6 +155,24 @@ export function getFundingRequestSummary(): FundingRequestSummary {
   };
 }
 
+export function getFundingDashboardMetrics(): FundingDashboardMetrics {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRequests = fundingRequests.filter((request) => request.requestedAt.startsWith(today));
+  const totalRequestedToday = todayRequests.reduce((sum, request) => sum + request.requestedAmount, 0);
+  const totalSentToday = todayRequests.reduce((sum, request) => sum + request.sentAmount, 0);
+  const outstandingRequests = fundingRequests.filter(
+    (request) => request.status !== "Available" && request.status !== "Cancelled"
+  ).length;
+  const fulfillmentRate = totalRequestedToday > 0 ? Math.round((totalSentToday / totalRequestedToday) * 100) : 0;
+
+  return {
+    totalRequestedToday,
+    totalSentToday,
+    outstandingRequests,
+    fulfillmentRate,
+  };
+}
+
 export function advanceFundingRequest(requestId: number, nextStatus: Exclude<FundingRequestStatus, "Pending" | "Cancelled">): FundingRequest | undefined {
   const request = fundingRequests.find((item) => item.id === requestId);
 
@@ -147,6 +182,8 @@ export function advanceFundingRequest(requestId: number, nextStatus: Exclude<Fun
 
   if (request.status === "Pending" && nextStatus === "Sent") {
     request.status = "Sent";
+    request.sentAmount = request.requestedAmount;
+    request.variance = request.sentAmount - request.receivedAmount;
     request.sentAt = new Date().toLocaleString("en-GB");
     addFundingHistoryEntry(request, "Sent", "Treasury recorded and sent the funding request");
     return request;
@@ -154,14 +191,17 @@ export function advanceFundingRequest(requestId: number, nextStatus: Exclude<Fun
 
   if (request.status === "Sent" && nextStatus === "Received") {
     request.status = "Received";
-    request.receivedAt = new Date().toLocaleString("en-GB");
     request.receivedAmount = request.requestedAmount;
+    request.variance = request.sentAmount - request.receivedAmount;
+    request.receivedAt = new Date().toLocaleString("en-GB");
     addFundingHistoryEntry(request, "Received", "Branch received the funding amount");
     return request;
   }
 
   if (request.status === "Received" && nextStatus === "Available") {
     request.status = "Available";
+    request.availableAmount = request.requestedAmount;
+    request.variance = request.sentAmount - request.receivedAmount;
     request.confirmedAt = new Date().toLocaleString("en-GB");
 
     updateBranchLiquidity(request.branchId, request.requestedAmount);

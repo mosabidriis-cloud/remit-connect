@@ -5,6 +5,10 @@ export interface FundingRequest {
   branchId: number;
   branchName: string;
   requestedAmount: number;
+  sentAmount: number;
+  receivedAmount: number;
+  availableAmount: number;
+  variance: number;
   currency: "SDG";
   status: FundingRequestStatus;
   requestedAt: string;
@@ -13,7 +17,6 @@ export interface FundingRequest {
   confirmedAt?: string;
   note?: string;
   reference: string;
-  receivedAmount?: number;
 }
 
 export interface FundingHistoryEntry {
@@ -33,4 +36,11 @@ export interface FundingRequestSummary {
   availableRequests: number;
   totalFundedAmount: number;
   branchesWithExcessSdg: number;
+}
+
+export interface FundingDashboardMetrics {
+  totalRequestedToday: number;
+  totalSentToday: number;
+  outstandingRequests: number;
+  fulfillmentRate: number;
 }
