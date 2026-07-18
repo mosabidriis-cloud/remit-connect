@@ -1,4 +1,19 @@
-function LoginPage() {
+import { useState } from "react";
+import Card from "../../components/ui/Card";
+import Button from "../../components/ui/Button";
+import TextInput from "../../components/forms/TextInput";
+
+export default function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  function handleLogin() {
+    console.log({
+      username,
+      password,
+    });
+  }
+
   return (
     <div
       style={{
@@ -6,93 +21,77 @@ function LoginPage() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
-        fontFamily: "Arial, sans-serif",
+        background: "#F5F7FA",
       }}
     >
       <div
         style={{
-          width: "400px",
-          background: "#FFFFFF",
-          padding: "40px",
-          borderRadius: "12px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+          width: 420,
         }}
       >
-        <h1
-          style={{
-            textAlign: "center",
-            color: "#1E5AA8",
-            marginBottom: "8px",
-          }}
-        >
-          REMIT CONNECT
-        </h1>
+        <Card>
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: 30,
+            }}
+          >
+            <h1
+              style={{
+                margin: 0,
+                color: "#1E5AA8",
+              }}
+            >
+              REMIT EXCHANGE
+            </h1>
 
-        <p
-          style={{
-            textAlign: "center",
-            color: "#6B7280",
-            marginBottom: "30px",
-          }}
-        >
-          Operations Portal
-        </p>
+            <p
+              style={{
+                color: "#64748B",
+                marginTop: 8,
+              }}
+            >
+              Operations Portal
+            </p>
+          </div>
 
-        <input
-          type="text"
-          placeholder="Username"
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "15px",
-            border: "1px solid #E5E7EB",
-            borderRadius: "8px",
-            boxSizing: "border-box",
-          }}
-        />
+          <TextInput
+            label="Username"
+            value={username}
+            onChange={setUsername}
+            placeholder="Enter username"
+          />
 
-        <input
-          type="password"
-          placeholder="Password"
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginBottom: "20px",
-            border: "1px solid #E5E7EB",
-            borderRadius: "8px",
-            boxSizing: "border-box",
-          }}
-        />
+          <TextInput
+            label="Password"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            placeholder="Enter password"
+          />
 
-        <button
-          style={{
-            width: "100%",
-            padding: "12px",
-            background: "#1E5AA8",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Sign In
-        </button>
+          <div
+            style={{
+              marginTop: 10,
+            }}
+          >
+            <Button onClick={handleLogin}>
+              Sign In
+            </Button>
+          </div>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "20px",
-            color: "#9CA3AF",
-            fontSize: "14px",
-          }}
-        >
-          Powered by REOS
-        </p>
+          <p
+            style={{
+              textAlign: "center",
+              marginTop: 24,
+              color: "#94A3B8",
+              fontSize: 13,
+            }}
+          >
+            Powered by REOS v1.0
+          </p>
+        </Card>
       </div>
     </div>
   );
 }
-
-export default LoginPage;
