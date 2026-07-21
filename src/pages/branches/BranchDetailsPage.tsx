@@ -12,11 +12,11 @@ export default function BranchDetailsPage() {
   if (!branch) {
     return (
       <MainLayout>
-        <PageContainer title="Branch Details">
+        <PageContainer title="Branch Liquidity Review">
           <Card>
             <p>Branch not found.</p>
-            <Link to="/branches" style={{ color: "#1E5AA8", fontWeight: 600 }}>
-              Back to branches
+            <Link to="/branch-liquidity" style={{ color: "#1E5AA8", fontWeight: 600 }}>
+              Back to branch liquidity
             </Link>
           </Card>
         </PageContainer>
@@ -26,8 +26,18 @@ export default function BranchDetailsPage() {
 
   return (
     <MainLayout>
-      <PageContainer title={`${branch.name} Details`}>
+      <PageContainer title={`${branch.name} Liquidity Review`}>
         <div style={{ display: "grid", gap: 24 }}>
+          <Card title="Recommended Decision">
+            <p style={{ margin: 0, color: "#334155", lineHeight: 1.7 }}>
+              {branch.status === "Urgent Funding"
+                ? "Approve immediate branch funding before assigning additional customer files."
+                : branch.status === "Funding Soon"
+                ? "Queue this branch for the next treasury funding run and keep monitoring threshold movement."
+                : "Branch can continue serving customers. No immediate funding action is required."}
+            </p>
+          </Card>
+
           <Card title="Branch Information">
             <div
               style={{
@@ -75,7 +85,7 @@ export default function BranchDetailsPage() {
             </div>
           </Card>
 
-          <Card title="Operational Status">
+          <Card title="Operational Control">
             <div
               style={{
                 display: "grid",
@@ -104,7 +114,7 @@ export default function BranchDetailsPage() {
             </div>
           </Card>
 
-          <Card title="Liquidity">
+          <Card title="Liquidity Position">
             <div
               style={{
                 display: "grid",
@@ -157,7 +167,7 @@ export default function BranchDetailsPage() {
             </div>
           </Card>
 
-          <Card title="Supported Services">
+          <Card title="Operational Capabilities">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {branch.services.map((service) => (
                 <span
@@ -171,22 +181,23 @@ export default function BranchDetailsPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {service}
+                  {service === "Account Funding" ? "Branch Liquidity Support" : service}
                 </span>
               ))}
             </div>
           </Card>
 
-          <Card title="Recent Activity">
+          <Card title="Decision Notes">
             <p style={{ margin: 0, color: "#64748B" }}>
-              No recent activity recorded yet.
+              Use this view to decide whether treasury should fund the branch now,
+              queue it for the next run, or allow normal service to continue.
             </p>
           </Card>
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <Link to="/branches" style={{ textDecoration: "none" }}>
-            <Button>Back to Branch List</Button>
+          <Link to="/branch-liquidity" style={{ textDecoration: "none" }}>
+            <Button>Back to Branch Liquidity</Button>
           </Link>
         </div>
       </PageContainer>

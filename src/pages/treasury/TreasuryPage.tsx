@@ -38,13 +38,21 @@ export default function TreasuryPage() {
 
   return (
     <MainLayout>
-      <PageContainer title="Treasury Foundation">
+      <PageContainer title="Treasury Funding Decisions">
+        <Card title="Treasury Decision Rule">
+          <p style={{ margin: 0, color: "#334155", lineHeight: 1.7 }}>
+            Approve requests that restore branch liquidity for customer service.
+            Reject requests that do not support the current funding run or require more review.
+          </p>
+        </Card>
+
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
             gap: 20,
             marginBottom: 24,
+            marginTop: 24,
           }}
         >
           <Card title="Pending Requests">
@@ -72,7 +80,7 @@ export default function TreasuryPage() {
           </Card>
         </div>
 
-        <Card title="Funding Requests">
+        <Card title="Treasury Approval Queue">
           <div style={{ display: "grid", gap: 12 }}>
             {requests.map((request) => (
               <div
@@ -93,10 +101,13 @@ export default function TreasuryPage() {
                   <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>
                     {request.reason}
                   </div>
-                  <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>
+                  <div style={{ color: "#64748B", fontSize: 13, marginTop: 4, display: "none" }}>
                     {request.requestedAmount.toLocaleString()} {request.currency} • {request.requestedAt}
                   </div>
-                </div>
+                  <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>
+                    {request.requestedAmount.toLocaleString()} {request.currency} - {request.requestedAt}
+                  </div>
+                  </div>
 
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <span
@@ -119,9 +130,9 @@ export default function TreasuryPage() {
 
                   {request.status === "Pending" && (
                     <>
-                      <Button onClick={() => handleApprove(request.id)}>Approve</Button>
+                      <Button onClick={() => handleApprove(request.id)}>Approve Funding</Button>
                       <Button onClick={() => handleReject(request.id)} variant="danger">
-                        Reject
+                        Reject Funding
                       </Button>
                     </>
                   )}
@@ -132,7 +143,7 @@ export default function TreasuryPage() {
         </Card>
 
         <div style={{ marginTop: 24 }}>
-          <Card title="Funding History">
+          <Card title="Treasury Decision History">
             <DataTable<FundingHistoryEntry>
               data={history}
               columns={[

@@ -5,39 +5,34 @@ export default function Sidebar() {
 
   const menuItems = [
     {
-      title: "Dashboard",
-      path: "/controller/dashboard",
-      icon: "📊",
+      title: "Operations Command",
+      path: "/operations-command",
+      icon: "OC",
     },
     {
-      title: "Branches",
-      path: "/branch",
-      icon: "🏦",
+      title: "Shared Batches",
+      path: "/shared-batches",
+      icon: "SB",
     },
     {
-      title: "Direct Remit",
-      path: "/direct-remit",
-      icon: "📁",
+      title: "Credit to Account",
+      path: "/credit-account",
+      icon: "CA",
     },
     {
-      title: "Treasury",
-      path: "/treasury",
-      icon: "🏛️",
+      title: "Branch Liquidity",
+      path: "/branch-liquidity",
+      icon: "BL",
     },
     {
-      title: "Funding Requests",
-      path: "/funding-requests",
-      icon: "💸",
+      title: "Treasury Decisions",
+      path: "/treasury-decisions",
+      icon: "TD",
     },
     {
-      title: "Reports",
-      path: "/reports",
-      icon: "📈",
-    },
-    {
-      title: "Settings",
-      path: "/settings",
-      icon: "⚙️",
+      title: "Funding Execution",
+      path: "/funding-execution",
+      icon: "FE",
     },
   ];
 
@@ -87,7 +82,7 @@ export default function Sidebar() {
         }}
       >
         {menuItems.map((item) => {
-          const active = location.pathname === item.path;
+          const active = location.pathname.startsWith(item.path);
 
           return (
             <Link

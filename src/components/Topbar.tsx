@@ -27,7 +27,7 @@ export default function Topbar() {
             fontWeight: 700,
           }}
         >
-          Remit Exchange
+          REOS Operations
         </h2>
 
         <div
@@ -37,7 +37,7 @@ export default function Topbar() {
             marginTop: 4,
           }}
         >
-          Operations Portal
+          Liquidity and funding control
         </div>
       </div>
 
@@ -74,10 +74,12 @@ export default function Topbar() {
 
         <div
           style={{
-            fontSize: 22,
-            cursor: "pointer",
+            fontSize: 0,
+            fontWeight: 700,
+            color: "#1E5AA8",
           }}
         >
+          <span style={{ fontSize: 14 }}>Alerts</span>
           🔔
         </div>
 

@@ -1,67 +1,23 @@
-# REOS AI Engineering Rules
+I’m refining the planning context around the Credit to Account workflow so the roadmap and screen inventory reflect the actual operational scope of REOS.
 
-## Project
+This clarifies the product scope. REOS should be treated as the operational control layer that receives batches from Direct Remit and manages the downstream Credit to Account payout workflow, rather than replacing Direct Remit itself.
 
-REOS (Remit Exchange Operations System)
+## Planning implication
+The MVP should be centered on:
+- Batch registration and tracking
+- Credit to Account processing lifecycle
+- Officer workload and assignment
+- Branch operations visibility
+- Treasury and liquidity support
+- Reporting, analytics, and audit trail
+- User, role, and permission management
 
-This repository is the single source of truth.
+## Recommended planning emphasis
+The first implementation milestones should focus on:
+1. Batch intake and queue management
+2. Processing workspace and status tracking
+3. Officer assignment and workload views
+4. Branch and treasury monitoring
+5. Reports and audit visibility
 
----
-
-## Development Philosophy
-
-Enterprise software.
-
-Architecture first.
-
-Business logic first.
-
-UI second.
-
-Never redesign working code.
-
----
-
-## Rules
-
-1. Never modify unrelated files.
-2. Never rename existing files unless instructed.
-3. Never install new packages unless instructed.
-4. Never redesign architecture.
-5. Never rewrite working modules.
-6. Keep TypeScript strict.
-7. Prefer reusable business components.
-8. Verify before coding.
-9. Explain implementation before editing.
-10. Ensure the project compiles before finishing.
-
----
-
-## Workflow
-
-1. Read the project.
-2. Understand the task.
-3. Explain the implementation plan.
-4. Modify only approved files.
-5. Build the project.
-6. Stop and wait for review.
-
----
-
-## Never
-
-- Never guess requirements.
-- Never add placeholder code.
-- Never change dependencies without approval.
-- Never change routing unless requested.
-- Never modify unrelated modules.
-
----
-
-## Priority
-
-Correctness > Speed
-
-Maintainability > Cleverness
-
-Consistency > Creativity
+This will keep the roadmap aligned with the real operational purpose of REOS.

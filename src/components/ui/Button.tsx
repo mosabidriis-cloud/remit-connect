@@ -3,6 +3,7 @@ type ButtonProps = {
   onClick?: () => void;
   type?: "button" | "submit";
   variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
 };
 
 export default function Button({
@@ -10,6 +11,7 @@ export default function Button({
   onClick,
   type = "button",
   variant = "primary",
+  disabled = false,
 }: ButtonProps) {
   const background =
     variant === "primary"
@@ -22,6 +24,7 @@ export default function Button({
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       style={{
         background,
         color: "#FFFFFF",
@@ -30,7 +33,8 @@ export default function Button({
         padding: "12px 20px",
         fontSize: 14,
         fontWeight: 600,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.65 : 1,
         transition: "0.2s",
       }}
     >

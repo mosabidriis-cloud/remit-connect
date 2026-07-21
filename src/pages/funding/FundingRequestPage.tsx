@@ -37,13 +37,21 @@ export default function FundingRequestPage() {
 
   return (
     <MainLayout>
-      <PageContainer title="Branch Funding Requests">
+      <PageContainer title="Funding Execution">
+        <Card title="Execution Decision">
+          <p style={{ margin: 0, color: "#334155", lineHeight: 1.7 }}>
+            Advance each funding request only when the prior cash movement is confirmed.
+            Cancel requests that should not continue in the current funding run.
+          </p>
+        </Card>
+
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
             gap: 20,
             marginBottom: 24,
+            marginTop: 24,
           }}
         >
           <Card title="Pending Requests">
@@ -52,7 +60,7 @@ export default function FundingRequestPage() {
             </div>
           </Card>
 
-          <Card title="Available Requests">
+          <Card title="Available to Branches">
             <div style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F" }}>
               {summary.availableRequests}
             </div>
@@ -71,7 +79,7 @@ export default function FundingRequestPage() {
           </Card>
         </div>
 
-        <Card title="Funding Requests">
+        <Card title="Funding Execution Queue">
           <DataTable<FundingRequest>
             data={requests}
             columns={[
@@ -104,7 +112,7 @@ export default function FundingRequestPage() {
                 render: (request) => request.status,
               },
               {
-                header: "Actions",
+                header: "Execution Decision",
                 render: (request) => {
                   const prioritySnapshot = getBranchPrioritySnapshot(request.branchId);
 
@@ -131,15 +139,15 @@ export default function FundingRequestPage() {
                       </span>
 
                       {request.status === "Pending" && (
-                        <Button onClick={() => handleAdvance(request.id, "Sent")}>Send</Button>
+                        <Button onClick={() => handleAdvance(request.id, "Sent")}>Mark Sent</Button>
                       )}
 
                       {request.status === "Sent" && (
-                        <Button onClick={() => handleAdvance(request.id, "Received")}>Receive</Button>
+                        <Button onClick={() => handleAdvance(request.id, "Received")}>Mark Received</Button>
                       )}
 
                       {request.status === "Received" && (
-                        <Button onClick={() => handleAdvance(request.id, "Available")}>Available</Button>
+                        <Button onClick={() => handleAdvance(request.id, "Available")}>Mark Available</Button>
                       )}
 
                       {request.status !== "Cancelled" && request.status !== "Available" && (
@@ -150,7 +158,7 @@ export default function FundingRequestPage() {
 
                       {prioritySnapshot.recommendedForOutwardAllocation && (
                         <span style={{ color: "#1E5AA8", fontSize: 13, fontWeight: 600 }}>
-                          Recommended
+                          Use excess SDG first
                         </span>
                       )}
                     </div>
@@ -162,7 +170,7 @@ export default function FundingRequestPage() {
         </Card>
 
         <div style={{ marginTop: 24 }}>
-          <Card title="Funding History">
+          <Card title="Execution History">
             <DataTable<FundingHistoryEntry>
               data={history}
               columns={[

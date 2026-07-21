@@ -32,8 +32,8 @@ export default function BranchListPage() {
 
   return (
     <MainLayout>
-      <PageContainer title="Branch Management">
-        <Card>
+      <PageContainer title="Branch Liquidity Decisions">
+        <Card title="Decision Filters">
           <div
             style={{
               display: "flex",
@@ -61,7 +61,7 @@ export default function BranchListPage() {
                   marginBottom: 8,
                 }}
               >
-                Status Filter
+                Funding Decision
               </label>
 
               <select
@@ -121,7 +121,11 @@ export default function BranchListPage() {
                   `${branch.liquidity.availableLiquidity.toLocaleString()} SDG`,
               },
               {
-                header: "Status",
+                header: "Health",
+                render: (branch) => branch.liquidity.health,
+              },
+              {
+                header: "Decision",
                 render: (branch) => (
                   <span
                     style={{
@@ -139,7 +143,11 @@ export default function BranchListPage() {
                       display: "inline-block",
                     }}
                   >
-                    {branch.status}
+                    {branch.status === "Urgent Funding"
+                      ? "Fund now"
+                      : branch.status === "Funding Soon"
+                      ? "Prepare funding"
+                      : "Keep serving"}
                   </span>
                 ),
               },
@@ -147,14 +155,14 @@ export default function BranchListPage() {
                 header: "Action",
                 render: (branch) => (
                   <Link
-                    to={`/branches/${branch.id}`}
+                    to={`/branch-liquidity/${branch.id}`}
                     style={{
                       color: "#1E5AA8",
                       fontWeight: 600,
                       textDecoration: "none",
                     }}
                   >
-                    View Details
+                    Review decision
                   </Link>
                 ),
               },

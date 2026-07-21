@@ -97,4 +97,19 @@ Do not implement unless specifically requested:
 - React Router
 - shadcn/ui
 
-Maintain consistent architecture throughout the project.
+Maintain consistent architecture throughout the project.# REOS Design Principles
+
+1. Operations First
+Software follows the real operational workflow.
+
+2. Safety Before Speed
+Preventing payment mistakes is more important than processing quickly.
+
+3. One Decision Per Screen
+Every screen exists to help the user make one operational decision.
+
+4. Progressive Development
+Implement only what is needed for the current milestone.
+
+5. No Scope Creep
+No feature is added unless it supports the approved business workflow.

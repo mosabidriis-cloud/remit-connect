@@ -14,20 +14,20 @@ export default function BranchStatusTable() {
           render: (branch) => branch.name,
         },
         {
-          header: "Liquidity",
+          header: "Available Liquidity",
           render: (branch) =>
             `${branch.liquidity.availableLiquidity.toLocaleString()} SDG`,
         },
         {
-          header: "Available Accounts",
-          render: (branch) => branch.availableAccounts.toFixed(2),
+          header: "Liquidity Health",
+          render: (branch) => branch.liquidity.health,
         },
         {
           header: "Files Ready",
           render: (branch) => branch.filesReady,
         },
         {
-          header: "Status",
+          header: "Operating Decision",
           render: (branch) => (
             <span
               style={{
@@ -44,7 +44,11 @@ export default function BranchStatusTable() {
                 fontSize: 13,
               }}
             >
-              {branch.status}
+              {branch.status === "Urgent Funding"
+                ? "Fund now"
+                : branch.status === "Funding Soon"
+                ? "Queue funding"
+                : "Keep serving"}
             </span>
           ),
         },
