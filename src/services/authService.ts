@@ -1,10 +1,19 @@
-// src/services/authService.ts
 import { supabase } from '../lib/supabase';
 import type { AuthUser, Session, LoginCredentials, Role } from '../auth/types';
 
+// Helper to map Supabase user to our AuthUser shape
+function mapSupabaseUserToAuthUser(user: any): AuthUser {
+  const role = (user.user_metadata?.role as Role) ?? null;
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    role,
+  };
+}
+
 /**
  * Signs in a user using username/password.
- * The username is treated as the email address in Supabase.
+ * The username is treated as the email address for Supabase authentication.
  */
 export async function login(credentials: LoginCredentials): Promise<{ user: AuthUser; session: Session }> {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -20,14 +29,7 @@ export async function login(credentials: LoginCredentials): Promise<{ user: Auth
     throw new Error('Login failed – no user or session returned');
   }
 
-  // Extract role from user metadata; fallback to null if missing
-  const role = (data.user.user_metadata?.role as Role) ?? null;
-
-  const user: AuthUser = {
-    id: data.user.id,
-    email: data.user.email ?? '',
-    role,
-  };
+  const user = mapSupabaseUserToAuthUser(data.user);
 
   const session: Session = {
     access_token: data.session.access_token,
@@ -55,6 +57,7 @@ export async function logout(): Promise<void> {
  */
 export async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
+
   if (error) {
     throw new Error(error.message);
   }
@@ -63,22 +66,15 @@ export async function getSession(): Promise<Session | null> {
     return null;
   }
 
-  // Build AuthUser from session user
-  const user: AuthUser = {
-    id: data.session.user.id,
-    email: data.session.user.email ?? '',
-    role: (data.session.user.user_metadata?.role as Role) ?? null,
-  };
+  const user = mapSupabaseUserToAuthUser(data.session.user);
 
-  const session: Session = {
+  return {
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
     expires_in: data.session.expires_in,
     token_type: data.session.token_type,
     user,
   };
-
-  return session;
 }
 
 /**
@@ -86,6 +82,7 @@ export async function getSession(): Promise<Session | null> {
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const { data, error } = await supabase.auth.getUser();
+
   if (error) {
     throw new Error(error.message);
   }
@@ -94,17 +91,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return null;
   }
 
-  const role = (data.user.user_metadata?.role as Role) ?? null;
-
-  return {
-    id: data.user.id,
-    email: data.user.email ?? '',
-    role,
-  };
+  return mapSupabaseUserToAuthUser(data.user);
 }
 
 /**
- * Subscribes to authentication state changes.
+ * Listens to authentication state changes.
  * Returns an unsubscribe function.
  */
 export function onAuthStateChange(
@@ -112,12 +103,7 @@ export function onAuthStateChange(
 ): () => void {
   return supabase.auth.onAuthStateChange((event, session) => {
     if (session) {
-      // Re‑hydrate the session shape expected by the rest of the app
-      const user: AuthUser = {
-        id: session.user.id,
-        email: session.user.email ?? '',
-        role: (session.user.user_metadata?.role as Role) ?? null,
-      };
+      const user = mapSupabaseUserToAuthUser(session.user);
       const adaptedSession: Session = {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
