@@ -10,6 +10,7 @@ import SharedBatchListPage from "../pages/shared-batches/SharedBatchListPage";
 import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPage";
 import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
 import CreditAccountBatchViewPage from "../pages/credit-account/CreditAccountBatchViewPage";
+import ReosPage from "../features/reos/pages/ReosPage";
 
 function LegacyBranchRedirect() {
   const { branchId } = useParams();
@@ -32,6 +33,7 @@ export default function AppRoutes() {
         path="/credit-account/batches/:batchId"
         element={<CreditAccountBatchViewPage />}
       />
+      <Route path="/reos" element={<ReosPage />} />
 
       <Route path="/branch-liquidity" element={<BranchListPage />} />
       <Route path="/branch-liquidity/:branchId" element={<BranchDetailsPage />} />
