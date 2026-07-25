@@ -10,7 +10,11 @@ import SharedBatchListPage from "../pages/shared-batches/SharedBatchListPage";
 import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPage";
 import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
 import CreditAccountBatchViewPage from "../pages/credit-account/CreditAccountBatchViewPage";
-import ReosPage from "../features/reos/pages/ReosPage";
+import { ReosLayout } from "../features/reos/layouts/ReosLayout";
+import { UserCreatePage } from "../features/reos/pages/UserCreatePage";
+import { UserDetailsPage } from "../features/reos/pages/UserDetailsPage";
+import { UserEditPage } from "../features/reos/pages/UserEditPage";
+import { UserListPage } from "../features/reos/pages/UserListPage";
 
 function LegacyBranchRedirect() {
   const { branchId } = useParams();
@@ -33,7 +37,42 @@ export default function AppRoutes() {
         path="/credit-account/batches/:batchId"
         element={<CreditAccountBatchViewPage />}
       />
-      <Route path="/reos" element={<ReosPage />} />
+      <Route
+        path="/reos"
+        element={<Navigate to="/reos/administration/users" replace />}
+      />
+      <Route
+        path="/reos/administration/users"
+        element={
+          <ReosLayout>
+            <UserListPage />
+          </ReosLayout>
+        }
+      />
+      <Route
+        path="/reos/administration/users/create"
+        element={
+          <ReosLayout>
+            <UserCreatePage />
+          </ReosLayout>
+        }
+      />
+      <Route
+        path="/reos/administration/users/:userId"
+        element={
+          <ReosLayout>
+            <UserDetailsPage />
+          </ReosLayout>
+        }
+      />
+      <Route
+        path="/reos/administration/users/:userId/edit"
+        element={
+          <ReosLayout>
+            <UserEditPage />
+          </ReosLayout>
+        }
+      />
 
       <Route path="/branch-liquidity" element={<BranchListPage />} />
       <Route path="/branch-liquidity/:branchId" element={<BranchDetailsPage />} />

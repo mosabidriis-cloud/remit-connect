@@ -101,7 +101,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 export function onAuthStateChange(
   callback: (event: string, session: Session | null) => void
 ): () => void {
-  return supabase.auth.onAuthStateChange((event, session) => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, session) => {
     if (session) {
       const user = mapSupabaseUserToAuthUser(session.user);
       const adaptedSession: Session = {
@@ -116,4 +118,6 @@ export function onAuthStateChange(
       callback(event, null);
     }
   });
+
+  return () => subscription.unsubscribe();
 }

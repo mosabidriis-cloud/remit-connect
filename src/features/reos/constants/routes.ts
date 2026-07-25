@@ -4,3 +4,7 @@ export const OPERATIONS = `${ROOT}/operations`;
 export const REPORTS = `${ROOT}/reports`;
 export const ADMINISTRATION = `${ROOT}/administration`;
 export const SETTINGS = `${ROOT}/settings`;
+export const USERS = `${ADMINISTRATION}/users`;
+export const USER_CREATE = `${USERS}/create`;
+export const USER_DETAILS = `${USERS}/:userId`;
+export const USER_EDIT = `${USERS}/:userId/edit`;
