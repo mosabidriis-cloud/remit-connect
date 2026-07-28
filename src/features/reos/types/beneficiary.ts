@@ -13,4 +13,6 @@ export interface Beneficiary {
   processingStatusId: string;
   returnReasonId: string | null;
   receiptUploaded: boolean;
+  manualReviewRequired: boolean;
+  manualReviewReason: string | null;
 }

@@ -320,3 +320,31 @@ Display:
 - Total Excess SDG
 - Branch Priority Score
 - Recommended branches for new transaction allocation
+Duplicate Direct Remit Reference Handling
+
+If duplicate Direct Remit Reference numbers are detected during batch upload:
+
+- Import all records.
+- Flag duplicate transactions.
+- Require manual review by the Operations Manager.
+- Do not automatically reject the batch.
+- Do not automatically remove duplicate transactions.
+# Branch Assignment
+
+A beneficiary may be assigned to only one branch at a time.
+
+After assignment, the beneficiary belongs to that branch until processing is completed or the assignment is officially changed.
+
+Branch reassignment is permitted only by the Operations Manager.
+
+Every reassignment must:
+
+- Preserve the previous branch assignment.
+- Record the new branch assignment.
+- Record the user performing the reassignment.
+- Record the reassignment date and time.
+- Record the reason for reassignment.
+
+Branch Officers cannot assign or reassign beneficiaries.
+
+Direct Remit Officers create Shared Batches but cannot reassign beneficiaries after assignment.

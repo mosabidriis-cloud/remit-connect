@@ -2,141 +2,99 @@
 
 ## Project
 
-REOS (Remit Exchange Operations System)
+REOS (Remit Exchange Operations System) is an internal employee-only operations portal for Remit Exchange.
 
-Internal Operations Portal for Remit Exchange.
+## Source of Truth
 
----
+- CURRENT_SPRINT.md is the authoritative definition for the active module.
+- Direct Remit remains the source of truth for Direct Remit batches.
+- REOS owns operational workflow and audit only.
 
-# Approved Business Flow
+## Approved Business Flow
 
-Direct Remit Officer
+1. Direct Remit Officer uploads a Direct Remit batch.
+2. Direct Remit Officer validates the uploaded batch.
+3. REOS parses beneficiary records.
+4. REOS normalizes the Bank field into bankName and accountNumber.
+5. REOS detects duplicate Direct Remit References and flags duplicates for manual review.
+6. Direct Remit Officer creates a Shared Batch.
+7. Direct Remit Officer manually assigns the Shared Batch to one branch.
+8. The Shared Batch becomes locked immediately after assignment.
+9. Branch Officer processes assigned transactions only.
+10. Branch Officer uploads one or more proof-of-payment screenshots for completed transactions.
+11. Direct Remit Officer downloads proof-of-payment files and uploads proofs back to Direct Remit.
 
-↓
+## Approved Roles
 
-Upload Batch
+### Operations Manager
 
-↓
+- Owns the system lifecycle.
+- Manages users, branches, audit, reports, dashboards, settings, and master data.
+- May reassign Shared Batches only as an administrative override.
 
-Validate Batch
+### Direct Remit Officer
 
-↓
+- Owns the batch lifecycle.
+- Uploads Direct Remit batches.
+- Validates uploaded batches.
+- Creates Shared Batches.
+- Assigns Shared Batches to branches.
+- Views completed batches.
+- Downloads proof-of-payment files.
+- Uploads proofs back to Direct Remit.
+- Does not process branch transactions.
 
-Create Shared Batch
-
-↓
-
-Assign Beneficiaries to Branches
-
-↓
-
-Branch Officer
-
-↓
-
-Credit-to-Account Processing
-
-↓
-
-Upload Receipt Screenshot
-
-↓
-
-Completed
-
-OR
-
-Returned
-
-↓
-
-Return Reason
-
----
-
-# Approved Roles
-
-## Operations Manager
-
-- Full operational visibility.
-- Manage users.
-- Manage branches.
-- Manage master data.
-- Monitor all operations.
-
----
-
-## Direct Remit Officer
-
-- Upload Direct Remit batches.
-- Validate uploaded batches.
-- Create Shared Batches.
-- Assign beneficiaries to branches.
-
----
-
-## Branch Officer
+### Branch Officer
 
 - Belongs to one branch.
-- Processes assigned beneficiaries.
-- Performs Credit-to-Account.
-- Uploads receipt screenshots.
-- Marks Completed or Returned.
+- Processes assigned transactions only.
+- Views assigned batches only.
+- Opens assigned batches.
+- Views imported transaction data.
+- Uploads one or more proof-of-payment screenshots.
+- Completes transactions.
+- Returns transactions.
+- Cannot assign or reassign Shared Batches.
+- Can only view Shared Batches assigned to their branch.
+- Cannot edit imported data.
+- Cannot delete completed transactions.
+- Cannot manage users.
 
----
+## Frozen Rules
 
-# Frozen Rules
+- One User = One Role.
+- One User = One Branch.
+- Operations Manager has enterprise-wide visibility.
+- Imported beneficiary data is read-only.
+- Direct Remit Reference is the operational transaction identifier.
+- Bank field is parsed into bankName and accountNumber.
+- Read-only transaction fields include Direct Remit Reference, Beneficiary Name, Bank Name, Account Number, Amount, Currency, and Transaction Date.
+- One Shared Batch is assigned to exactly one branch.
+- Shared Batches cannot be split across multiple branches.
+- Batch assignment is manual.
+- Batch becomes locked immediately after assignment.
+- Branch Officers cannot edit imported beneficiary information.
+- No manual amount entry.
+- No transfer reference entry.
+- A transaction may contain multiple proof-of-payment screenshots.
+- Proof uploads consist only of image files.
+- A transaction cannot be completed until at least one proof exists.
+- Return Transaction requires a predefined Return Reason and may include an optional comment.
+- Proof-of-payment files are temporary.
+- Proof-of-payment files are automatically deleted 90 minutes after upload.
+- Only proof metadata remains permanently.
+- REOS responsibility ends after the Direct Remit Officer downloads proof files.
 
-One User = One Role.
+## Out of Scope Unless Explicitly Approved
 
-One User = One Branch.
-
-Exception:
-
-Operations Manager has enterprise-wide visibility.
-
-Imported beneficiary data is read-only.
-
-Direct Remit Reference is the operational transaction identifier.
-
-Bank field is parsed into:
-
-- bankName
-- accountNumber
-
-Branch Officers cannot edit imported beneficiary information.
-
-Receipt Screenshot is proof of payment.
-
-Return Reason is required when a beneficiary is returned.
-
----
-
-# Out of Scope
-
-No Treasury.
-
-No Cash Pickup.
-
-No Banking Core.
-
-No ERP.
-
-No CRM.
-
-No generic approval workflows.
-
-No generic workflow engine.
-
-No notifications unless explicitly approved.
-
----
-
-# Source of Truth
-
-When business rules conflict with implementation,
-the business rules always win.
-
-Do not redesign approved workflows.
-
-Do not invent missing business processes.
+- Treasury
+- Cash Pickup
+- Banking Core
+- ERP
+- CRM
+- Generic approval workflows
+- Generic workflow engine
+- Notifications
+- Supabase persistence
+- Authentication changes
+- Automatic cleanup scheduler
