@@ -6,145 +6,53 @@ Status: Active
 
 ## Module
 
-Sprint 7 - Proof Download
+Sprint 9 - Reporting Module
 
 ## Authority
 
 This document is the authoritative definition for the active REOS module.
 
+REPORTING_STANDARDS.md is the canonical reporting standard for this sprint.
+
 ## Business Goal
 
-Allow the Direct Remit Officer to download proof-of-payment files after a Shared Batch has completed processing.
+Build the REOS Reporting Module using the canonical reporting standard.
 
-## Direct Remit Officer Scope
+Every report must answer one business question.
 
-Direct Remit Officers may:
+Reports must use only the categories, layout, filters, export rules, table behavior, visibility guidance, and design principles defined in REPORTING_STANDARDS.md.
 
-- View completed batches.
-- Open Batch Download Summary.
-- Download all proofs as ZIP.
-- Download individual proof images.
-- Mark Shared Batch as DOWNLOADED.
+## Users
 
-Direct Remit Officers may not:
+Recommended visibility is defined in REPORTING_STANDARDS.md.
 
-- Edit transactions.
-- Upload proofs.
-- Delete proofs.
-- Modify beneficiary information.
+No new permissions are introduced in this sprint.
 
-## Operations Manager Scope
+## Scope
 
-Operations Managers may:
+Create operational reports only.
 
-- Monitor completed batch proof download status in read-only mode.
+Reports must follow REPORTING_STANDARDS.md.
 
-## Branch Officer Scope
+## Required Standard
 
-Branch Officers have no new permissions in this sprint.
-
-## Workflow
-
-COMPLETED
-
-READY_FOR_DOWNLOAD
-
-Batch Download Summary
-
-Download ZIP
-
-Optional Download Individual Proof
-
-Confirm
-
-DOWNLOADED
-
-REOS Workflow Complete
-
-## Lifecycle
-
-Use the existing lifecycle:
-
-- ASSIGNED
-- PROCESSING
-- COMPLETED
-- READY_FOR_DOWNLOAD
-- DOWNLOADED
-
-Never use a boolean Downloaded flag.
-
-## Batch Download Summary
-
-Display:
-
-- Shared Batch Reference
-- Direct Remit Batch Reference
-- Assigned Branch
-- Number of Transactions
-- Number of Proof Images
-- Completed Transactions
-- Returned Transactions
-- Processing Status
-- Download Status
-- Completed By
-- Completed Time
-- Downloaded By
-- Downloaded Time
-
-## Actions
-
-Primary action:
-
-- Download ZIP
-
-Secondary action:
-
-- Download Individual Proof
-
-Before marking DOWNLOADED, show:
-
-"This action completes the REOS operational workflow for this batch."
-
-Buttons:
-
-- Cancel
-- Confirm
+All reporting implementation must reference REPORTING_STANDARDS.md instead of duplicating reporting rules in this sprint document.
 
 ## Allowed Directories
 
-src/features/reos/types
+src/features/reos
 
-src/features/reos/services
-
-src/features/reos/components
-
-src/features/reos/pages
-
-src/features/reos/routes
-
-src/features/reos/constants
+docs/AI
 
 ## Out of Scope
 
-- Dashboard
-- Reports
-- Notifications
-- Scheduler
-- Persistence
-- Supabase
-- Authentication
-- Direct Remit API Integration
+Anything outside REPORTING_STANDARDS.md is out of scope unless explicitly approved by a future sprint.
 
 ## Acceptance Criteria
 
 - Module compiles.
 - Production build succeeds.
-- Existing User Management continues working.
-- Shared Batch Management continues working.
-- Branch Assignment continues working.
+- No previous sprint functionality is modified.
 - No unrelated application modules are modified.
-- Batch Download Summary displays required fields.
-- Direct Remit Officer can download all proof images as ZIP.
-- Direct Remit Officer can download individual proof images.
-- Direct Remit Officer can mark a Shared Batch as DOWNLOADED.
-- Operations Manager access remains read-only.
+- Reports follow REPORTING_STANDARDS.md.
+- Every report answers one business question.
