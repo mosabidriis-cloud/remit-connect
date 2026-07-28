@@ -1,17 +1,19 @@
 # Definition of Done
 
-Use this checklist at the end of each sprint.
+Use this checklist at the end of each sprint implementation.
 
 ## Sprint Completion Checklist
 
-- Requirements are understood and documented.
+- Canonical documents were read in the README.md order.
 - Business rules were preserved.
-- Scope stayed within the sprint and the approved module.
-- Changes align with the existing architecture and project structure.
-- The implementation compiles successfully.
-- The production build succeeds.
-- Relevant review and validation steps are completed.
-- No unrelated application modules were modified.
+- Sprint scope was preserved.
+- Architecture boundaries were preserved.
+- Only required files were modified.
+- Documentation updates were completed where required.
+- TypeScript validation passed.
+- Production build passed.
 - Git status was reviewed.
-- Documentation was updated where needed.
-- The work is ready for review and commit.
+- Files created were reported.
+- Files modified were reported.
+- Validation notes were reported.
+- Business decisions required were reported.

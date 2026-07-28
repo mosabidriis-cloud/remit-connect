@@ -1,14 +1,10 @@
 # Implementation Workflow
 
-This document captures the implementation workflow guidance that was previously held in CODEX instructions.
+This document defines the required implementation workflow for work performed under the REOS AI documentation framework.
 
 ## Before Making Changes
 
-1. Read the following documents in order:
-   - PROJECT_RULES.md
-   - BUSINESS_RULES.md
-   - REOS_ARCHITECTURE.md
-   - CURRENT_SPRINT.md
+1. Read the canonical documents in the order defined by README.md.
 
 2. Never redesign approved business rules.
 
@@ -28,10 +24,12 @@ This document captures the implementation workflow guidance that was previously 
 
 Before concluding implementation work, report:
 
+- Documentation updated
 - Files created
 - Files modified
-- Assumptions
 - Build status
+- Validation notes
+- Business decisions required
 
 ## Decision Gate
 

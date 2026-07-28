@@ -1,44 +1,53 @@
 # REOS AI Entry Point
 
-This file is the single entry point for REOS AI documentation.
+README.md is the single entry point for the REOS AI documentation framework.
 
-Before making any code changes, read these documents in order:
+Before making any code changes, read these canonical documents in order:
 
 1. README.md
 2. BUSINESS_RULES.md
-3. CURRENT_SPRINT.md
-4. REOS_ARCHITECTURE.md
-5. IMPLEMENTATION_WORKFLOW.md
-6. DEVELOPMENT_STANDARDS.md
-7. DECISIONS.md
-8. CHANGELOG.md
+3. LIFECYCLE.md
+4. CURRENT_SPRINT.md
+5. ROADMAP.md
+6. REOS_ARCHITECTURE.md
+7. IMPLEMENTATION_WORKFLOW.md
+8. DEVELOPMENT_STANDARDS.md
 9. DEFINITION_OF_DONE.md
+10. DECISIONS.md
+11. CHANGELOG.md
 
 ## Documentation Map
 
-### Core guidance
-- README.md — entry point and reading order
-- BUSINESS_RULES.md — frozen business rules and approved workflow
-- CURRENT_SPRINT.md — active sprint scope and acceptance criteria
-- REOS_ARCHITECTURE.md — architecture, ownership boundaries, and workflow constraints
+### Business and Workflow
 
-### Implementation and delivery
-- IMPLEMENTATION_WORKFLOW.md — implementation workflow and reporting expectations
-- DEVELOPMENT_STANDARDS.md — development standards, coding rules, and technology guidance
-- DECISIONS.md — decision log template
-- CHANGELOG.md — changelog template
-- DEFINITION_OF_DONE.md — sprint completion checklist
+- BUSINESS_RULES.md - frozen business rules and approved business flow.
+- LIFECYCLE.md - canonical Shared Batch lifecycle states and allowed transitions.
+- CURRENT_SPRINT.md - active sprint scope, permissions, acceptance criteria, and sprint boundaries.
+- ROADMAP.md - completed, active, upcoming, and future sprint sequencing.
+
+### Architecture and Engineering
+
+- REOS_ARCHITECTURE.md - REOS module boundaries, ownership boundaries, and persistence boundary.
+- IMPLEMENTATION_WORKFLOW.md - required implementation process and reporting expectations.
+- DEVELOPMENT_STANDARDS.md - engineering standards, technology stack, and coding rules.
+- DEFINITION_OF_DONE.md - completion checklist aligned with the implementation workflow.
+
+### Governance
+
+- DECISIONS.md - decision log template.
+- CHANGELOG.md - completed framework and sprint milestones only.
 
 These documents together define:
 
 - Project scope
 - Frozen business rules
-- System architecture
+- Canonical lifecycle
 - Current sprint objective
+- System architecture
 - Implementation standards
 - Delivery and review expectations
 
-Do not proceed until all documents have been read.
+Do not proceed until all canonical documents have been read.
 
 CURRENT_SPRINT.md is the authoritative definition for the active module.
 

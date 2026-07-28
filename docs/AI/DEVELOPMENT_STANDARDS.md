@@ -1,6 +1,6 @@
 # Development Standards
 
-This document captures the project-level development guidance that was previously held in PROJECT_RULES.
+This document defines the engineering standards for work performed under the REOS AI documentation framework.
 
 ## Project Scope
 
