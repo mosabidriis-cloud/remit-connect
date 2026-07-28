@@ -2,6 +2,7 @@ import type { RouteObject } from "react-router-dom";
 import { ReosLayout } from "../layouts/ReosLayout";
 import { BranchAssignmentPage } from "../pages/BranchAssignmentPage";
 import { BranchProcessingPage } from "../pages/BranchProcessingPage";
+import { OperationsDashboardPage } from "../pages/OperationsDashboardPage";
 import { ProofDownloadPage } from "../pages/ProofDownloadPage";
 import { SharedBatchUploadPage } from "../pages/SharedBatchUploadPage";
 import { TransactionProcessingPage } from "../pages/TransactionProcessingPage";
@@ -11,6 +12,14 @@ import { UserEditPage } from "../pages/UserEditPage";
 import { UserListPage } from "../pages/UserListPage";
 
 export const reosRoutes: RouteObject[] = [
+  {
+    path: "reos/dashboard",
+    element: (
+      <ReosLayout>
+        <OperationsDashboardPage />
+      </ReosLayout>
+    ),
+  },
   {
     path: "reos/branches/:branchId/processing",
     element: (
