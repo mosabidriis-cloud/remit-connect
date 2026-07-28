@@ -6,7 +6,7 @@ Status: Active
 
 ## Module
 
-Sprint 6 - Credit-to-Account Processing
+Sprint 7 - Proof Download
 
 ## Authority
 
@@ -14,58 +14,101 @@ This document is the authoritative definition for the active REOS module.
 
 ## Business Goal
 
-Allow Branch Officers to process assigned Credit-to-Account transactions while preserving complete operational audit.
-
-## Branch Officer Scope
-
-Branch Officers may:
-
-- View assigned batches only.
-- Open assigned batches.
-- View imported transaction data.
-- Upload one or more proof-of-payment screenshots.
-- Complete transactions.
-- Return transactions.
-
-Branch Officers may not:
-
-- Edit imported data.
-- Assign batches.
-- Reassign batches.
-- Delete completed transactions.
-- Manage users.
+Allow the Direct Remit Officer to download proof-of-payment files after a Shared Batch has completed processing.
 
 ## Direct Remit Officer Scope
 
 Direct Remit Officers may:
 
 - View completed batches.
-- Download proof-of-payment files.
+- Open Batch Download Summary.
+- Download all proofs as ZIP.
+- Download individual proof images.
+- Mark Shared Batch as DOWNLOADED.
 
-Direct Remit Officers may not process transactions.
+Direct Remit Officers may not:
+
+- Edit transactions.
+- Upload proofs.
+- Delete proofs.
+- Modify beneficiary information.
 
 ## Operations Manager Scope
 
 Operations Managers may:
 
-- View all branches.
-- View all transactions.
-- View processing.
-- Use administrative override only where already defined.
+- Monitor completed batch proof download status in read-only mode.
 
-## Processing Rules
+## Branch Officer Scope
 
-- Imported transaction data is read-only.
-- Read-only fields include Direct Remit Reference, Beneficiary Name, Bank Name, Account Number, Amount, Currency, and Transaction Date.
-- Direct Remit Reference is the operational transaction identifier.
-- A transaction may contain multiple proof-of-payment screenshots.
-- No manual amount entry.
-- No transfer reference entry.
-- Proof uploads consist only of image files.
-- A transaction cannot be completed until at least one proof exists.
-- Return Transaction requires a predefined Return Reason and may include an optional comment.
-- REOS responsibility ends after the Direct Remit Officer downloads proof files.
-- Proof cleanup architecture must be prepared, but no automatic deletion scheduler is implemented.
+Branch Officers have no new permissions in this sprint.
+
+## Workflow
+
+COMPLETED
+
+READY_FOR_DOWNLOAD
+
+Batch Download Summary
+
+Download ZIP
+
+Optional Download Individual Proof
+
+Confirm
+
+DOWNLOADED
+
+REOS Workflow Complete
+
+## Lifecycle
+
+Use the existing lifecycle:
+
+- ASSIGNED
+- PROCESSING
+- COMPLETED
+- READY_FOR_DOWNLOAD
+- DOWNLOADED
+
+Never use a boolean Downloaded flag.
+
+## Batch Download Summary
+
+Display:
+
+- Shared Batch Reference
+- Direct Remit Batch Reference
+- Assigned Branch
+- Number of Transactions
+- Number of Proof Images
+- Completed Transactions
+- Returned Transactions
+- Processing Status
+- Download Status
+- Completed By
+- Completed Time
+- Downloaded By
+- Downloaded Time
+
+## Actions
+
+Primary action:
+
+- Download ZIP
+
+Secondary action:
+
+- Download Individual Proof
+
+Before marking DOWNLOADED, show:
+
+"This action completes the REOS operational workflow for this batch."
+
+Buttons:
+
+- Cancel
+- Confirm
 
 ## Allowed Directories
 
@@ -79,17 +122,18 @@ src/features/reos/pages
 
 src/features/reos/routes
 
+src/features/reos/constants
+
 ## Out of Scope
 
 - Dashboard
 - Reports
 - Notifications
 - Scheduler
-- Automatic cleanup
 - Persistence
-- Authentication changes
-- Supabase changes
-- Direct Remit upload
+- Supabase
+- Authentication
+- Direct Remit API Integration
 
 ## Acceptance Criteria
 
@@ -99,7 +143,8 @@ src/features/reos/routes
 - Shared Batch Management continues working.
 - Branch Assignment continues working.
 - No unrelated application modules are modified.
-- Processing screen supports speed-focused branch transaction processing.
-- Proof uploads accept image files only.
-- Completion requires at least one proof.
-- Returns require a predefined Return Reason.
+- Batch Download Summary displays required fields.
+- Direct Remit Officer can download all proof images as ZIP.
+- Direct Remit Officer can download individual proof images.
+- Direct Remit Officer can mark a Shared Batch as DOWNLOADED.
+- Operations Manager access remains read-only.

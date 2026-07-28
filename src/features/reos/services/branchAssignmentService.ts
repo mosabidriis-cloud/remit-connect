@@ -20,6 +20,7 @@ export function assignSharedBatchToBranch(input: SharedBatchAssignmentInput): Sh
     sharedBatch: {
       ...input.sharedBatch,
       assignmentStatus: "ASSIGNED",
+      lifecycleStatus: "ASSIGNED",
       assignedBranchId: input.branchId,
       assignedByUserId: input.assignedByUserId,
       assignedAt,
@@ -50,6 +51,7 @@ export function reassignSharedBatch(input: SharedBatchReassignmentInput): Shared
     sharedBatch: {
       ...input.sharedBatch,
       assignmentStatus: "ASSIGNED",
+      lifecycleStatus: "ASSIGNED",
       assignedBranchId: input.newBranchId,
       assignedBeneficiaries: input.sharedBatch.totalBeneficiaries,
       isLocked: true,

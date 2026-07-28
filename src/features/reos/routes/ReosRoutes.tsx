@@ -2,6 +2,7 @@ import type { RouteObject } from "react-router-dom";
 import { ReosLayout } from "../layouts/ReosLayout";
 import { BranchAssignmentPage } from "../pages/BranchAssignmentPage";
 import { BranchProcessingPage } from "../pages/BranchProcessingPage";
+import { ProofDownloadPage } from "../pages/ProofDownloadPage";
 import { SharedBatchUploadPage } from "../pages/SharedBatchUploadPage";
 import { TransactionProcessingPage } from "../pages/TransactionProcessingPage";
 import { UserCreatePage } from "../pages/UserCreatePage";
@@ -23,6 +24,14 @@ export const reosRoutes: RouteObject[] = [
     element: (
       <ReosLayout>
         <TransactionProcessingPage />
+      </ReosLayout>
+    ),
+  },
+  {
+    path: "reos/shared-batches/:batchId/proof-download",
+    element: (
+      <ReosLayout>
+        <ProofDownloadPage />
       </ReosLayout>
     ),
   },

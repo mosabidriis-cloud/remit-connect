@@ -2,6 +2,13 @@ export type SharedBatchAssignmentStatus =
   | "UNASSIGNED"
   | "ASSIGNED";
 
+export type SharedBatchLifecycleStatus =
+  | "ASSIGNED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "READY_FOR_DOWNLOAD"
+  | "DOWNLOADED";
+
 export interface SharedBatch {
   id: string;
   reference: string;
@@ -15,6 +22,7 @@ export interface SharedBatch {
   duplicateReferenceCount: number;
   manualReviewCount: number;
   assignmentStatus: SharedBatchAssignmentStatus;
+  lifecycleStatus: SharedBatchLifecycleStatus;
   assignedBranchId: string | null;
   assignedByUserId: string | null;
   assignedAt: string | null;

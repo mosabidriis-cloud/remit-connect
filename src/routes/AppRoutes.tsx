@@ -11,6 +11,7 @@ import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPa
 import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
 import CreditAccountBatchViewPage from "../pages/credit-account/CreditAccountBatchViewPage";
 import { ReosLayout } from "../features/reos/layouts/ReosLayout";
+import { ProofDownloadPage } from "../features/reos/pages/ProofDownloadPage";
 import { UserCreatePage } from "../features/reos/pages/UserCreatePage";
 import { UserDetailsPage } from "../features/reos/pages/UserDetailsPage";
 import { UserEditPage } from "../features/reos/pages/UserEditPage";
@@ -40,6 +41,14 @@ export default function AppRoutes() {
       <Route
         path="/reos"
         element={<Navigate to="/reos/administration/users" replace />}
+      />
+      <Route
+        path="/reos/shared-batches/:batchId/proof-download"
+        element={
+          <ReosLayout>
+            <ProofDownloadPage />
+          </ReosLayout>
+        }
       />
       <Route
         path="/reos/administration/users"

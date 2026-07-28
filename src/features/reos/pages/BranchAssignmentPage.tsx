@@ -70,6 +70,7 @@ function createUnassignedSharedBatch(values: BranchAssignmentFormValues): Shared
     duplicateReferenceCount: 0,
     manualReviewCount: 0,
     assignmentStatus: "UNASSIGNED",
+    lifecycleStatus: "ASSIGNED",
     assignedBranchId: null,
     assignedByUserId: null,
     assignedAt: null,

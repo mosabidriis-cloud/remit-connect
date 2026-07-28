@@ -1,3 +1,4 @@
+import { BatchLifecycleBadge } from "./BatchLifecycleBadge";
 import type { SharedBatch } from "../types/sharedBatch";
 
 type SharedBatchSummaryProps = {
@@ -16,6 +17,12 @@ export function SharedBatchSummary({ sharedBatch }: SharedBatchSummaryProps) {
       <SummaryItem label="Assigned Branch" value={sharedBatch.assignedBranchId ?? "Unassigned"} />
       <SummaryItem label="Batch Lock" value={sharedBatch.isLocked ? "Locked" : "Unlocked"} />
       <SummaryItem label="Assignment Status" value={sharedBatch.assignmentStatus} />
+      <div className="md:col-span-3">
+        <div className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lifecycle</span>
+          <BatchLifecycleBadge status={sharedBatch.lifecycleStatus} />
+        </div>
+      </div>
     </div>
   );
 }

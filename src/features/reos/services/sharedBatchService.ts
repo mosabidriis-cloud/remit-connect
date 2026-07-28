@@ -238,6 +238,7 @@ function createSharedBatch(
     duplicateReferenceCount,
     manualReviewCount: duplicateReferenceCount,
     assignmentStatus: "UNASSIGNED",
+    lifecycleStatus: "ASSIGNED",
     assignedBranchId: null,
     assignedByUserId: null,
     assignedAt: null,

@@ -11,5 +11,6 @@ export const USER_EDIT = `${USERS}/:userId/edit`;
 export const SHARED_BATCHES = `${ROOT}/shared-batches`;
 export const SHARED_BATCH_UPLOAD = `${SHARED_BATCHES}/upload`;
 export const SHARED_BATCH_ASSIGNMENT = `${SHARED_BATCHES}/assignment`;
+export const PROOF_DOWNLOAD = `${SHARED_BATCHES}/:batchId/proof-download`;
 export const BRANCH_PROCESSING = `${ROOT}/branches/:branchId/processing`;
 export const TRANSACTION_PROCESSING = `${BRANCH_PROCESSING}/:batchId/transactions/:transactionId`;
