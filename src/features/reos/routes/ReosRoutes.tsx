@@ -4,6 +4,7 @@ import { BranchAssignmentPage } from "../pages/BranchAssignmentPage";
 import { BranchProcessingPage } from "../pages/BranchProcessingPage";
 import { OperationsDashboardPage } from "../pages/OperationsDashboardPage";
 import { ProofDownloadPage } from "../pages/ProofDownloadPage";
+import { ReportsPage } from "../pages/ReportsPage";
 import { SharedBatchUploadPage } from "../pages/SharedBatchUploadPage";
 import { TransactionProcessingPage } from "../pages/TransactionProcessingPage";
 import { UserCreatePage } from "../pages/UserCreatePage";
@@ -17,6 +18,14 @@ export const reosRoutes: RouteObject[] = [
     element: (
       <ReosLayout>
         <OperationsDashboardPage />
+      </ReosLayout>
+    ),
+  },
+  {
+    path: "reos/reports",
+    element: (
+      <ReosLayout>
+        <ReportsPage />
       </ReosLayout>
     ),
   },
