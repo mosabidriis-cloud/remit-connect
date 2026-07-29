@@ -9,6 +9,10 @@ export type ReportCategory = "VOLUME" | "PERFORMANCE";
 export type ReportType =
   | "SHARED_BATCHES"
   | "TRANSACTIONS"
+  | "COMPLETED_TRANSACTIONS"
+  | "RETURNED_TRANSACTIONS"
+  | "READY_FOR_DOWNLOAD_BATCHES"
+  | "DOWNLOADED_BATCHES"
   | "BRANCH_PERFORMANCE"
   | "OFFICER_PERFORMANCE"
   | "PROCESSING_TIME"
@@ -22,8 +26,8 @@ export interface ReportFilter {
   fromDate: string | null;
   toDate: string | null;
   branchId: string | null;
+  batchReference: string | null;
   reportType: ReportType;
-  lifecycleStatus: SharedBatchLifecycleStatus | null;
 }
 
 export interface ReportColumn {
@@ -52,6 +56,7 @@ export interface ReportResult<T> {
   filters: ReportFilter;
   metrics: ReportMetric[];
   rows: T[];
+  totals: ReportMetric[];
   generatedAt: string;
 }
 
@@ -65,4 +70,23 @@ export interface TransactionReportRow {
 
 export interface BranchBatchReportRow {
   batch: BranchProcessingBatch;
+}
+
+export interface ReportSourceData {
+  sharedBatches?: SharedBatch[];
+  processingBatches?: BranchProcessingBatch[];
+}
+
+export interface VolumeReportRow extends Record<string, unknown> {
+  id: string;
+  batchReference: string;
+  branchId: string | null;
+  transactionReference?: string;
+  beneficiaryName?: string;
+  status?: SharedBatchLifecycleStatus | CreditToAccountTransaction["status"];
+  transactionCount?: number;
+  completedCount?: number;
+  returnedCount?: number;
+  proofCount?: number;
+  date: string;
 }

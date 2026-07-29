@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { BatchLifecycleBadge } from "../BatchLifecycleBadge";
 import type { ReportColumn } from "../../types/report";
 import type { SharedBatchLifecycleStatus } from "../../types/sharedBatch";
+import type { CreditToAccountTransactionStatus } from "../../types/transactionProcessing";
 
 type SortDirection = "asc" | "desc";
 
@@ -176,6 +177,10 @@ function formatCellValue(value: unknown): React.ReactNode {
     return <BatchLifecycleBadge status={value} />;
   }
 
+  if (isTransactionStatus(value)) {
+    return <TransactionStatusBadge status={value} />;
+  }
+
   if (typeof value === "string" && isIsoDate(value)) {
     return formatDateTime(value);
   }
@@ -187,6 +192,26 @@ function formatCellValue(value: unknown): React.ReactNode {
   return String(value);
 }
 
+function TransactionStatusBadge({ status }: { status: CreditToAccountTransactionStatus }) {
+  const styles: Record<CreditToAccountTransactionStatus, string> = {
+    PENDING: "border-slate-200 bg-slate-50 text-slate-700",
+    COMPLETED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    RETURNED: "border-red-200 bg-red-50 text-red-700",
+  };
+
+  const labels: Record<CreditToAccountTransactionStatus, string> = {
+    PENDING: "Pending",
+    COMPLETED: "Completed",
+    RETURNED: "Returned",
+  };
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
+      {labels[status]}
+    </span>
+  );
+}
+
 function isLifecycleStatus(value: unknown): value is SharedBatchLifecycleStatus {
   return (
     value === "ASSIGNED" ||
@@ -195,6 +220,10 @@ function isLifecycleStatus(value: unknown): value is SharedBatchLifecycleStatus 
     value === "READY_FOR_DOWNLOAD" ||
     value === "DOWNLOADED"
   );
+}
+
+function isTransactionStatus(value: unknown): value is CreditToAccountTransactionStatus {
+  return value === "PENDING" || value === "COMPLETED" || value === "RETURNED";
 }
 
 function isIsoDate(value: string): boolean {

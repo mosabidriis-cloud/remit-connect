@@ -1,28 +1,44 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ReportExportActions } from "../components/reports/ReportExportActions";
 import { ReportFilters } from "../components/reports/ReportFilters";
 import { ReportHeader } from "../components/reports/ReportHeader";
 import { ReportSummary } from "../components/reports/ReportSummary";
 import { ReportTable } from "../components/reports/ReportTable";
 import { reportService } from "../services/reportService";
-import type { ReportFilter } from "../types/report";
+import type { ReportFilter, ReportMetric, ReportSourceData, VolumeReportRow } from "../types/report";
 
-const defaultGeneratedAt = new Date().toISOString();
+type ReportsLocationState = ReportSourceData;
 
 export function ReportsPage() {
+  const location = useLocation();
+  const state = location.state as ReportsLocationState | null;
+  const sourceData = useMemo<ReportSourceData>(
+    () => ({
+      sharedBatches: state?.sharedBatches ?? [],
+      processingBatches: state?.processingBatches ?? [],
+    }),
+    [state],
+  );
   const definitions = useMemo(() => reportService.getDefinitions(), []);
   const firstDefinition = definitions[0];
   const [filters, setFilters] = useState<ReportFilter>({
     fromDate: null,
     toDate: null,
     branchId: null,
+    batchReference: null,
     reportType: firstDefinition?.type ?? "SHARED_BATCHES",
-    lifecycleStatus: null,
   });
 
-  const selectedDefinition =
-    definitions.find((definition) => definition.type === filters.reportType) ??
-    firstDefinition;
+  const filtersAreValid = reportService.validateFilters(filters);
+  const result = useMemo(
+    () =>
+      filtersAreValid
+        ? reportService.createVolumeReportResult(sourceData, filters)
+        : null,
+    [filters, filtersAreValid, sourceData],
+  );
+  const selectedDefinition = result?.definition ?? firstDefinition;
 
   return (
     <section className="grid gap-6 p-4">
@@ -32,7 +48,7 @@ export function ReportsPage() {
           "Reusable reporting foundation for approved operational reports."
         }
         category={selectedDefinition?.category ?? "VOLUME"}
-        generatedAt={defaultGeneratedAt}
+        generatedAt={result?.generatedAt ?? new Date().toISOString()}
         name={selectedDefinition?.name ?? "Reports"}
       />
 
@@ -42,21 +58,36 @@ export function ReportsPage() {
         onChange={setFilters}
       />
 
-      {!reportService.validateFilters(filters) ? (
+      {!filtersAreValid ? (
         <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           The selected date range is invalid.
         </div>
       ) : null}
 
-      <ReportSummary metrics={[]} />
+      <ReportSummary metrics={result?.metrics ?? []} />
 
-      <ReportTable<Record<string, unknown>>
+      <ReportTable<VolumeReportRow>
         columns={selectedDefinition?.columns ?? []}
-        getRowKey={(_, index) => String(index)}
-        rows={[]}
+        defaultSortKey="date"
+        getRowKey={(row) => row.id}
+        rows={result?.rows ?? []}
+        totals={getTableTotals(result?.totals ?? [])}
       />
 
       <ReportExportActions />
     </section>
   );
+}
+
+function getTableTotals(metrics: ReportMetric[]): Partial<Record<keyof VolumeReportRow, string | number>> {
+  return {
+    transactionCount: getMetricValue(metrics, "Total Transactions"),
+    completedCount: getMetricValue(metrics, "Completed"),
+    returnedCount: getMetricValue(metrics, "Returned"),
+    proofCount: getMetricValue(metrics, "Proofs"),
+  };
+}
+
+function getMetricValue(metrics: ReportMetric[], label: string): string | number | undefined {
+  return metrics.find((metric) => metric.label === label)?.value;
 }

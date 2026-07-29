@@ -1,6 +1,5 @@
 import type { ChangeEvent } from "react";
 import type { ReportDefinition, ReportFilter } from "../../types/report";
-import type { SharedBatchLifecycleStatus } from "../../types/sharedBatch";
 
 type ReportFiltersProps = {
   definitions: ReportDefinition[];
@@ -8,21 +7,13 @@ type ReportFiltersProps = {
   onChange: (filters: ReportFilter) => void;
 };
 
-const lifecycleStatuses: SharedBatchLifecycleStatus[] = [
-  "ASSIGNED",
-  "PROCESSING",
-  "COMPLETED",
-  "READY_FOR_DOWNLOAD",
-  "DOWNLOADED",
-];
-
 export function ReportFilters({
   definitions,
   filters,
   onChange,
 }: ReportFiltersProps) {
   const handleTextFieldChange =
-    (field: "fromDate" | "toDate" | "branchId") =>
+    (field: "fromDate" | "toDate" | "branchId" | "batchReference") =>
     (event: ChangeEvent<HTMLInputElement>) => {
       onChange({
         ...filters,
@@ -45,18 +36,9 @@ export function ReportFilters({
     });
   };
 
-  const handleLifecycleStatusChange = (
-    event: ChangeEvent<HTMLSelectElement>,
-  ) => {
-    onChange({
-      ...filters,
-      lifecycleStatus: (event.target.value || null) as SharedBatchLifecycleStatus | null,
-    });
-  };
-
   return (
     <section className="rounded border border-slate-200 bg-white p-4">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">Report</span>
           <select
@@ -109,29 +91,16 @@ export function ReportFilters({
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="font-medium text-slate-700">Lifecycle Status</span>
-          <select
-            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-            onChange={handleLifecycleStatusChange}
-            value={filters.lifecycleStatus ?? ""}
-          >
-            <option value="">All statuses</option>
-            {lifecycleStatuses.map((status) => (
-              <option key={status} value={status}>
-                {formatLifecycleStatus(status)}
-              </option>
-            ))}
-          </select>
+          <span className="font-medium text-slate-700">Batch Reference</span>
+          <input
+            className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            onChange={handleTextFieldChange("batchReference")}
+            placeholder="Batch reference"
+            type="search"
+            value={filters.batchReference ?? ""}
+          />
         </label>
       </div>
     </section>
   );
-}
-
-function formatLifecycleStatus(status: SharedBatchLifecycleStatus): string {
-  return status
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
