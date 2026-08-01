@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import Badge from "../../../components/ui/Badge";
+import { LogoPlaceholder } from "./LogoPlaceholder";
 
 export type SidebarItem = {
   label: string;
@@ -94,40 +95,34 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`hidden border-r border-slate-200 bg-white transition-all duration-200 md:flex md:min-h-screen md:flex-col ${
+      className={`hidden border-r border-slate-200 bg-white shadow-sm shadow-slate-200/60 transition-[width] duration-300 ease-in-out md:flex md:min-h-screen md:flex-col ${
         collapsed ? "md:w-20" : "md:w-72"
       }`}
     >
-      <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-4">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded bg-slate-950 text-sm font-semibold text-white">
-          RE
-        </div>
-        {!collapsed ? (
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-slate-950">REOS</div>
-            <div className="truncate text-xs text-slate-500">Operations System</div>
-          </div>
-        ) : null}
+      <div className="flex h-16 items-center border-b border-slate-200 px-4">
+        <LogoPlaceholder collapsed={collapsed} />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
         {sidebarSections.map((section) => (
-          <div className="mb-5" key={section.label}>
-            {!collapsed ? (
-              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-normal text-slate-500">
+          <div className="mb-6 last:mb-0" key={section.label}>
+            <div
+              className={`mb-2 overflow-hidden px-2 text-xs font-semibold uppercase tracking-normal text-slate-500 transition-all duration-300 ${
+                collapsed ? "h-0 opacity-0" : "h-5 opacity-100"
+              }`}
+            >
                 {section.label}
-              </div>
-            ) : null}
-            <div className="grid gap-1">
+            </div>
+            <div className="grid gap-1.5">
               {section.items.map((item) => {
                 const active = item.match.test(location.pathname);
 
                 return (
                   <Link
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition ${
+                    className={`group relative flex items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
                       active
-                        ? "bg-slate-950 text-white"
+                        ? "bg-slate-950 text-white shadow-sm"
                         : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                     } ${collapsed ? "justify-center" : ""}`}
                     key={item.label}
@@ -135,13 +130,24 @@ export function Sidebar({ collapsed }: SidebarProps) {
                     to={item.href}
                   >
                     <span
-                      className={`grid h-6 w-6 shrink-0 place-items-center rounded text-xs ${
-                        active ? "bg-white/15" : "bg-slate-100"
+                      className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-400 transition-opacity duration-200 ${
+                        active ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <span
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded text-xs transition-colors ${
+                        active ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-white"
                       }`}
                     >
                       {getInitials(item.label)}
                     </span>
-                    {!collapsed ? <span className="truncate">{item.label}</span> : null}
+                    <span
+                      className={`truncate transition-all duration-300 ${
+                        collapsed ? "w-0 opacity-0" : "w-44 opacity-100"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}

@@ -18,7 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             collapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
           />
-          <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+          <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{children}</main>
         </div>
       </div>
     </div>

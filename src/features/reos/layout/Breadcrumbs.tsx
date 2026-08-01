@@ -7,7 +7,7 @@ export function Breadcrumbs() {
   const crumbs = ["REOS", activeItem?.label ?? "Workspace"];
 
   return (
-    <nav aria-label="Breadcrumb" className="min-w-0 text-sm text-slate-600">
+    <nav aria-label="Breadcrumb" className="mt-0.5 min-w-0 text-sm text-slate-600">
       <ol className="flex min-w-0 flex-wrap items-center gap-2">
         <li>
           <Link className="font-medium text-slate-700 hover:text-slate-950" to="/reos/dashboard">
