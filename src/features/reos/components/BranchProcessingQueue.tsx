@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { StatusBadge } from "./common/StatusBadge";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import { getBranchProcessingQueueSummary, type BranchProcessingQueueItem, type BranchProcessingQueueStatus, updateBranchProcessingQueueItemStatus } from "../services/branchProcessingQueueService";
@@ -9,20 +10,20 @@ type BranchProcessingQueueProps = {
   branchName: string;
 };
 
-const statusColors: Record<BranchProcessingQueueStatus, { backgroundColor: string; color: string }> = {
-  ASSIGNED: { backgroundColor: colors.blue50, color: colors.primary },
-  IN_PROGRESS: { backgroundColor: colors.blue50, color: colors.primary },
-  COMPLETED: { backgroundColor: "#ECFDF5", color: "#065F46" },
-  ON_HOLD: { backgroundColor: "#FEF3C7", color: "#92400E" },
-  RETURNED: { backgroundColor: "#FEE2E2", color: "#B91C1C" },
-};
-
 const statusLabel: Record<BranchProcessingQueueStatus, string> = {
   ASSIGNED: "Assigned",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   ON_HOLD: "On Hold",
   RETURNED: "Returned",
+};
+
+const statusTone: Record<BranchProcessingQueueStatus, "blue" | "emerald" | "amber" | "red" | "slate"> = {
+  ASSIGNED: "blue",
+  IN_PROGRESS: "blue",
+  COMPLETED: "emerald",
+  ON_HOLD: "amber",
+  RETURNED: "red",
 };
 
 export function BranchProcessingQueue({ assignments, branchId, branchName }: BranchProcessingQueueProps) {
@@ -67,6 +68,10 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
           </div>
           <div style={{ display: "grid", gap: spacing.sm, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", marginTop: spacing.md }}>
             <div style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}>
+              <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Assigned</div>
+              <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{summary.assigned}</div>
+            </div>
+            <div style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}>
               <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Completed</div>
               <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{summary.completed}</div>
             </div>
@@ -89,7 +94,6 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
           <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Transaction Queue</div>
           <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
             {queueItems.map((item) => {
-              const styles = statusColors[item.status];
               return (
                 <button
                   key={item.id}
@@ -110,9 +114,7 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
                         {item.beneficiary.beneficiaryName}
                       </div>
                     </div>
-                    <div style={{ backgroundColor: styles.backgroundColor, borderRadius: 999, color: styles.color, fontSize: typography.caption, padding: "4px 8px" }}>
-                      {statusLabel[item.status]}
-                    </div>
+                    <StatusBadge label={statusLabel[item.status]} tone={statusTone[item.status]} />
                   </div>
                 </button>
               );
@@ -142,18 +144,43 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
             </div>
 
             <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.lg }}>
-              <button onClick={() => handleStatusChange("IN_PROGRESS")} style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, padding: `${spacing.sm}px ${spacing.md}px` }} type="button">
-                Start Processing
-              </button>
-              <button onClick={() => handleStatusChange("COMPLETED")} style={{ backgroundColor: "#2563EB", border: "none", borderRadius: radius.sm, color: colors.surface, padding: `${spacing.sm}px ${spacing.md}px` }} type="button">
-                Complete
-              </button>
-              <button onClick={() => handleStatusChange("ON_HOLD")} style={{ backgroundColor: "#F59E0B", border: "none", borderRadius: radius.sm, color: colors.surface, padding: `${spacing.sm}px ${spacing.md}px` }} type="button">
-                Put On Hold
-              </button>
-              <button onClick={() => handleStatusChange("RETURNED")} style={{ backgroundColor: "#DC2626", border: "none", borderRadius: radius.sm, color: colors.surface, padding: `${spacing.sm}px ${spacing.md}px` }} type="button">
-                Return
-              </button>
+              {(selectedItem.status === "ASSIGNED" || selectedItem.status === "ON_HOLD") && (
+                <button
+                  onClick={() => handleStatusChange("IN_PROGRESS")}
+                  style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.md}px` }}
+                  type="button"
+                >
+                  {selectedItem.status === "ON_HOLD" ? "Resume Processing" : "Start Processing"}
+                </button>
+              )}
+              {selectedItem.status === "IN_PROGRESS" && (
+                <>
+                  <button
+                    onClick={() => handleStatusChange("COMPLETED")}
+                    style={{ backgroundColor: "#2563EB", border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.md}px` }}
+                    type="button"
+                  >
+                    Complete
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange("ON_HOLD")}
+                    style={{ backgroundColor: "#F59E0B", border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.md}px` }}
+                    type="button"
+                  >
+                    Put On Hold
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange("RETURNED")}
+                    style={{ backgroundColor: "#DC2626", border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.md}px` }}
+                    type="button"
+                  >
+                    Return
+                  </button>
+                </>
+              )}
+              {(selectedItem.status === "COMPLETED" || selectedItem.status === "RETURNED") && (
+                <div style={{ color: colors.muted, fontSize: typography.small }}>No actions available.</div>
+              )}
             </div>
           </>
         ) : (

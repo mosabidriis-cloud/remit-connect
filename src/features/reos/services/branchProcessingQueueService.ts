@@ -36,13 +36,34 @@ export function getBranchProcessingQueue(branchId: string): BranchProcessingQueu
   return branchProcessingQueueState.filter((item) => item.branchId === branchId);
 }
 
+export function canTransitionToStatus(currentStatus: BranchProcessingQueueStatus, nextStatus: BranchProcessingQueueStatus): boolean {
+  if (currentStatus === "ASSIGNED") {
+    return nextStatus === "IN_PROGRESS";
+  }
+
+  if (currentStatus === "IN_PROGRESS") {
+    return nextStatus === "COMPLETED" || nextStatus === "ON_HOLD" || nextStatus === "RETURNED";
+  }
+
+  if (currentStatus === "ON_HOLD") {
+    return nextStatus === "IN_PROGRESS";
+  }
+
+  return false;
+}
+
 export function updateBranchProcessingQueueItemStatus(itemId: string, status: BranchProcessingQueueStatus) {
   const matchingItem = branchProcessingQueueState.find((item) => item.id === itemId);
 
-  if (matchingItem) {
-    matchingItem.status = status;
+  if (!matchingItem) {
+    return null;
   }
 
+  if (!canTransitionToStatus(matchingItem.status, status)) {
+    return matchingItem;
+  }
+
+  matchingItem.status = status;
   return matchingItem;
 }
 
