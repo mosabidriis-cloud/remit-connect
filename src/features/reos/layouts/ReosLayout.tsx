@@ -1,7 +1,9 @@
+import { AppLayout } from "../layout/AppLayout";
+
 type ReosLayoutProps = {
   children?: React.ReactNode;
 };
 
 export function ReosLayout({ children }: ReosLayoutProps) {
-  return <main>{children}</main>;
+  return <AppLayout>{children}</AppLayout>;
 }

@@ -33,6 +33,8 @@ export function OperationsDashboardPage() {
     document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const visibleStats = dashboard.stats.filter((stat) => !["USD Value Today", "Revenue Today"].includes(stat.label));
+
   return (
     <PageContainer>
       <PageHeader
@@ -59,7 +61,7 @@ export function OperationsDashboardPage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {dashboard.stats.map((stat) => (
+        {visibleStats.map((stat) => (
           <KpiCard detail={stat.detail} key={stat.id} label={stat.label} value={stat.value} />
         ))}
       </section>
