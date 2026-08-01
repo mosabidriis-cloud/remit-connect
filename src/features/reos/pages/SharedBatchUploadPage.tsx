@@ -9,8 +9,9 @@ import { UploadProgress } from "../components/UploadProgress";
 import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
-import { createAssignment } from "../services/assignmentService";
+import { assignSharedBatchToBranch } from "../services/branchAssignmentService";
 import { validateExcelUpload } from "../services/excelValidationService";
+import { saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
 import { spacing } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
@@ -70,6 +71,7 @@ export function SharedBatchUploadPage() {
       setValidationSummary(result.summary);
       setValidationIssues(result.issues);
       setSharedBatch(result.sharedBatch);
+      saveSharedBatch(result.sharedBatch);
       setAssignableBeneficiaries(result.beneficiaries);
       setProgress(100);
       setIsUploading(false);
@@ -179,34 +181,29 @@ export function SharedBatchUploadPage() {
                     return;
                   }
 
-                  const nextAssignment = createAssignment({
+                  const result = assignSharedBatchToBranch({
                     sharedBatch,
                     beneficiaries: remainingReadyTransactions,
                     branchId,
                     branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
-                    assignedBy: "current-user",
-                    assignedAt: new Date().toISOString(),
+                    assignedByUserId: "current-user",
+                    actorRole: "DIRECT_REMIT_OFFICER",
                   });
 
-                  const nextAssignments = [...assignments, nextAssignment];
+                  const nextAssignments = [...assignments, result.assignment];
                   const nextAssignedBeneficiaryIds = [
                     ...assignedBeneficiaryIds,
-                    ...nextAssignment.assignedTransactions.map((beneficiary) => beneficiary.id),
+                    ...result.assignment.assignedTransactions.map((beneficiary) => beneficiary.id),
                   ];
 
-                  setAssignment(nextAssignment);
+                  saveAssignment(result.assignment);
+                  saveSharedBatch(result.sharedBatch);
+
+                  setAssignment(result.assignment);
                   setAssignments(nextAssignments);
                   setAssignedBeneficiaryIds(nextAssignedBeneficiaryIds);
                   setIsAssignmentFinalized(true);
-                  setSharedBatch((current) => current ? {
-                    ...current,
-                    assignmentStatus: "ASSIGNED",
-                    assignedBranchId: nextAssignment.assignedBranchId,
-                    assignedBeneficiaries: nextAssignments.reduce((total, currentAssignment) => total + currentAssignment.assignedTransactions.length, 0),
-                    assignedByUserId: nextAssignment.assignedBy,
-                    assignedAt: nextAssignment.assignedAt,
-                    isLocked: true,
-                  } : current);
+                  setSharedBatch(result.sharedBatch);
                   setValidationSummary((current) => current ? { ...current, batchStatus: "ASSIGNED" } : current);
                   setIsAssignmentConfirmed(true);
                 }}
@@ -229,7 +226,6 @@ export function SharedBatchUploadPage() {
         onCancel={() => setShowConfirmDialog(false)}
         onConfirm={() => {
           setShowConfirmDialog(false);
-          setSharedBatch((current) => current ? { ...current, isLocked: true } : current);
           setValidationSummary((current) => current ? { ...current, batchStatus: "READY_FOR_ASSIGNMENT", processingMode: "Process Valid Transactions Only" } : current);
           setIsConfirmed(true);
         }}

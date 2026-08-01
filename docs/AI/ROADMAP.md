@@ -9,14 +9,15 @@ CURRENT_SPRINT.md is the single source of truth for active sprint scope. This do
 - Sprint 10 Enterprise UI
 - Sprint 11 Shared Batch Upload
 - Sprint 12 Branch Assignment
+- Sprint 13 Branch Processing - stabilization complete (3 open business decisions carried forward as risk; see CURRENT_SPRINT.md and TECH_DEBT.md, not blocking sprint sequencing).
 
 ## Active
 
-- Sprint 13 Branch Processing - in progress, completed through the current milestone. See CURRENT_SPRINT.md for current milestone detail.
+- Sprint 14 Proof Management - Architecture & Planning only. Design complete (see PROOF_MANAGEMENT.md); implementation not started, not ready to start pending open business decisions. See CURRENT_SPRINT.md.
 
 ## Upcoming
 
-- Not yet defined. To be documented in CURRENT_SPRINT.md when scoped.
+- Sprint 14 Proof Management - implementation, once the open business decisions in CURRENT_SPRINT.md / PROOF_MANAGEMENT.md are resolved.
 
 ## Future
 

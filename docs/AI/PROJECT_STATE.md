@@ -14,46 +14,44 @@ develop
 
 ## Current Sprint
 
-Sprint 13
+Sprint 14
 
 ## Current Module
 
-Branch Processing
+Proof Management
 
 ## Current Milestone
 
-Branch Processing stabilization - code review, styling consistency, and status terminology unification complete. Ready to close pending flagged business decisions. See CURRENT_SPRINT.md for full detail.
+Milestone 1.5: Assignment Workflow Consolidation - COMPLETE. `branchAssignmentService.ts` is now the one canonical Assignment workflow (DECISIONS.md DEC-006); `assignmentService.createAssignment` is an internal implementation detail, no longer called directly from any page. See CURRENT_SPRINT.md for full detail, including the remaining gaps.
 
 ## Current Git Tag
 
-v0.13.2-processing-completion (latest tag). Working tree has uncommitted changes beyond this tag: business-rule gating fixes in `branchProcessingQueueService.ts` / `BranchProcessingQueue.tsx`; shared-component/theme-token migration in `ReturnTransactionDialog.tsx`, `TransactionCard.tsx`, `ProcessingProgress.tsx`, `TransactionProcessingPage.tsx`, `ProofUpload.tsx`, `ProofGallery.tsx`; branch-status terminology unified to `COMPLETED` in `branchProcessingQueueService.ts`, `BranchProcessingQueue.tsx`, `BranchProcessingCompletionDialog.tsx`.
+v0.13.2-processing-completion (latest tag). Working tree has uncommitted changes beyond this tag: Sprint 14 Milestones 1 and 1.5 (workflow integration + Assignment consolidation), on top of Sprint 13's stabilization changes. Milestone 1.5 touched `branchAssignmentService.ts`, `SharedBatchUploadPage.tsx`, `BranchAssignmentPage.tsx`; `BranchProcessingPage.tsx` was verified to need no change.
 
 ## Build Status
 
-Both checked and passing as of this session (2026-08-01, after the full stabilization pass):
+Both checked and passing as of this session (2026-08-01, after Milestone 1.5):
 - `npx tsc -p tsconfig.app.json --noEmit --incremental false` - clean, no errors.
 - `npm run build` - succeeded.
 
 ## Last Completed Milestone
 
-Branch Processing stabilization (3 passes):
-1. Fixed a frozen-business-rule gap where the Branch Processing Queue could mark a transaction COMPLETED with no proof-of-payment or RETURNED with no predefined Return Reason (now gated in `branchProcessingQueueService.ts`, reusing `ProofUpload`/`ProofGallery`/`ReturnTransactionDialog`); migrated `ReturnTransactionDialog`, `TransactionCard`, `ProcessingProgress` to shared theme tokens; removed a redundant non-functional button in `TransactionProcessingPage.tsx`.
-2. Full-module review: migrated `ProofUpload`/`ProofGallery` to shared theme tokens (completing style consistency across the module); re-verified the queue state machine is internally consistent; confirmed no unused imports/dead code in `BranchProcessingPage.tsx`.
-3. Status terminology unification: identified `COMPLETED` as the canonical branch completion status (LIFECYCLE.md), removed the duplicate invented term `READY_FOR_PROOF` from `branchProcessingQueueService.ts`'s `BranchProcessingStatus` type and every reference to it (service gating checks, `BranchProcessingQueue.tsx`'s lock check and status badge, `BranchProcessingCompletionDialog.tsx`'s copy). No workflow behavior changed.
+Sprint 14 Milestone 1.5: Assignment Workflow Consolidation. `branchAssignmentService.ts`'s `assignSharedBatchToBranch`/`reassignSharedBatch` now also build the `Assignment` record (internally calling `assignmentService.createAssignment`), in addition to their existing role/lock/reassignment-reason enforcement. `SharedBatchUploadPage.tsx` no longer creates Assignments independently - it calls the canonical service. A latent bug was corrected in the process: `SharedBatchUploadPage.tsx` was setting `SharedBatch.isLocked = true` at upload-confirmation time rather than at assignment time, which would have made the canonical service's pre-existing lock check reject every first assignment; the premature write was removed so `isLocked` now only becomes `true` on actual assignment, matching BUSINESS_RULES.md.
 
-Preceding milestones: Branch Processing Completion (`v0.13.2-processing-completion`), Branch Processing Engine (`v0.13.1-processing-engine`), Branch Processing Queue UI (`v0.13.0-branch-processing-ui`).
+Preceding: Sprint 14 Milestone 1 (Workflow Integration - `sharedBatchStore.ts`, LIFECYCLE.md transitions, Branch Processing -> Proof Management adapter); Sprint 14 Milestone 0 (Architecture & Planning, PROOF_MANAGEMENT.md); Sprint 13 Branch Processing stabilization (3 passes).
 
 ## Next Planned Milestone
 
-Not yet defined. Blocked on business decisions (see CURRENT_SPRINT.md): (1) wiring real Branch Assignment output into Branch Processing input - no assignment-store service exists; (2) whether Branch Processing needs actor-role gating (none exists today, unlike `branchAssignmentService.ts`); (3) whether to unify the two structurally-similar completion/return validation implementations (`transactionProcessingService.ts` vs `branchProcessingQueueService.ts`). See ROADMAP.md ("Upcoming") and TECH_DEBT.md.
+Not yet defined. Candidates, per CURRENT_SPRINT.md's "Remaining Gaps": (1) `BranchAssignmentPage.tsx` has no access to real uploaded beneficiary data, so its Assignments are always empty; (2) implement the Shared Batch `COMPLETED -> READY_FOR_DOWNLOAD` transition (Open Decision 2, still unresolved); (3) Sprint 13's carried-forward decisions (actor-role gating in Branch Processing, duplicate completion/return validation logic).
 
 ## Active Constraints
 
 - No persistence beyond in-memory unless explicitly approved by the active sprint (ARCHITECTURE.md).
 - No Treasury, Cash Pickup, Banking Core, ERP, CRM, or generic workflow engine features (BUSINESS_RULES.md).
-- No frozen business rule may be changed (BUSINESS_RULES.md).
+- No frozen business rule may be changed (BUSINESS_RULES.md). Note: Milestone 1.5 corrected a rule-violating bug (isLocked timing) rather than changing a rule.
 - Sprint scope is frozen once approved (DECISIONS.md, DEC-005).
 - Modify only files required by the active sprint (CLAUDE.md).
+- Exactly one owner for Assignment creation/management (DECISIONS.md DEC-006, established this milestone).
 
 ## Last Updated
 

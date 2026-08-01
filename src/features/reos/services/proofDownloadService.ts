@@ -1,3 +1,5 @@
+import { getBranchProcessingQueue, type BranchProcessingQueueStatus } from "./branchProcessingQueueService";
+import { getAssignmentsByBranch } from "./sharedBatchStore";
 import type {
   BatchDownloadSummary,
   DownloadableProof,
@@ -7,9 +9,68 @@ import type {
   ProofDownloadRequest,
 } from "../types/proofDownload";
 import type { ProofOfPayment } from "../types/proofOfPayment";
+import type { SharedBatch } from "../types/sharedBatch";
+import type { CreditToAccountTransaction, CreditToAccountTransactionStatus } from "../types/transactionProcessing";
 
 const textEncoder = new TextEncoder();
 let crcTable: Uint32Array | null = null;
+
+/**
+ * Builds a ProofDownloadBatch view of a Shared Batch from Branch Processing's current
+ * queue state - the read side of the Branch Processing -> Proof Management handoff.
+ * Returns null if the Shared Batch has not been assigned to a branch.
+ */
+export function buildProofDownloadBatchFromSharedBatch(sharedBatch: SharedBatch): ProofDownloadBatch | null {
+  if (!sharedBatch.assignedBranchId) {
+    return null;
+  }
+
+  const assignmentIds = new Set(
+    getAssignmentsByBranch(sharedBatch.assignedBranchId)
+      .filter((assignment) => assignment.sharedBatchId === sharedBatch.id)
+      .map((assignment) => assignment.id),
+  );
+
+  const transactions: CreditToAccountTransaction[] = getBranchProcessingQueue(sharedBatch.assignedBranchId)
+    .filter((item) => assignmentIds.has(item.assignmentId))
+    .map((item) => ({
+      id: item.id,
+      beneficiary: item.beneficiary,
+      status: toTransactionStatus(item.status),
+      proofs: item.proofs,
+      completedByUserId: null,
+      completedAt: null,
+      returnedByUserId: null,
+      returnedAt: null,
+      returnReason: item.returnReason,
+      returnComment: item.returnComment,
+    }));
+
+  return {
+    id: sharedBatch.id,
+    sharedBatchReference: sharedBatch.reference,
+    directRemitBatchReference: sharedBatch.reference,
+    assignedBranchId: sharedBatch.assignedBranchId,
+    lifecycleStatus: sharedBatch.lifecycleStatus,
+    transactions,
+    completedByUserId: null,
+    completedAt: null,
+    downloadedByUserId: null,
+    downloadedAt: null,
+  };
+}
+
+function toTransactionStatus(status: BranchProcessingQueueStatus): CreditToAccountTransactionStatus {
+  if (status === "COMPLETED") {
+    return "COMPLETED";
+  }
+
+  if (status === "RETURNED") {
+    return "RETURNED";
+  }
+
+  return "PENDING";
+}
 
 export function getBatchDownloadSummary(batch: ProofDownloadBatch): BatchDownloadSummary {
   const downloadableProofs = getDownloadableProofs(batch);

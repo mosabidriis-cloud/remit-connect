@@ -25,6 +25,7 @@ README.md is the documentation index for the REOS AI documentation framework.
 - MODULE_STATUS.md - status, sprint, completion, and notes for every REOS module.
 - REPORTING_STANDARDS.md - canonical report categories, layout, filters, exports, table behavior, and reporting data-source rules.
 - UI_GUIDELINES.md - canonical UI, component, and report layout conventions.
+- PROOF_MANAGEMENT.md - canonical architecture and design reference for the Proof Management module (Sprint 14).
 
 ### Architecture and Engineering
 

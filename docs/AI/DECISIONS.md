@@ -49,3 +49,11 @@
 - Context: CURRENT_SPRINT.md; WORKFLOW.md; DEFINITION_OF_DONE.md.
 - Rationale: Prevents scope creep and keeps sprint acceptance criteria verifiable.
 - Status: APPROVED
+
+### DEC-006 - branchAssignmentService.ts is the canonical Assignment workflow
+
+- Date: Approved 2026-08-01 (Sprint 14 Milestone 1.5)
+- Decision: `branchAssignmentService.ts` (`assignSharedBatchToBranch` / `reassignSharedBatch`) is the only entry point that may create or update an `Assignment`. It enforces the frozen role rules (Direct Remit Officer assigns; Operations Manager reassigns) and the one-branch-per-batch lock. Internally it calls `assignmentService.createAssignment` to build the `Assignment` record (beneficiary ready/manual-review/invalid triage) - that function is now an internal implementation detail and must not be called directly from pages or components.
+- Context: Two independent Assignment-creation paths were found during Sprint 14 Milestone 1 (`SharedBatchUploadPage.tsx` calling `assignmentService.createAssignment` inline, with no role or lock enforcement, vs. `BranchAssignmentPage.tsx` calling `branchAssignmentService.ts`, which enforced the rules but never produced an `Assignment` object). Consolidated in Milestone 1.5.
+- Rationale: `branchAssignmentService.ts` already enforced BUSINESS_RULES.md's role and locking rules; `assignmentService.createAssignment` already correctly built the `Assignment` record Branch Processing depends on. Combining them under one canonical entry point removes the duplicate ownership without discarding either implementation.
+- Status: APPROVED

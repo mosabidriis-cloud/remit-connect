@@ -1,11 +1,42 @@
+import { createAssignment } from "./assignmentService";
+import type { Assignment } from "../types/assignment";
+import type { Beneficiary } from "../types/beneficiary";
 import type {
   SharedBatchAssignmentInput,
-  SharedBatchAssignmentResult,
+  SharedBatchReassignmentAudit,
   SharedBatchReassignmentInput,
 } from "../types/branchAssignment";
 import type { SharedBatch } from "../types/sharedBatch";
 
-export function assignSharedBatchToBranch(input: SharedBatchAssignmentInput): SharedBatchAssignmentResult {
+/**
+ * Canonical Assignment workflow (Sprint 14 Milestone 1.5). This is the only
+ * entry point that may create or update an Assignment for a Shared Batch.
+ * assignmentService.createAssignment is an internal implementation detail of
+ * this service and must not be called directly from pages or components.
+ */
+export interface AssignSharedBatchInput extends SharedBatchAssignmentInput {
+  beneficiaries: Beneficiary[];
+  branchName: string;
+}
+
+export interface AssignSharedBatchResult {
+  sharedBatch: SharedBatch;
+  assignment: Assignment;
+  audit: null;
+}
+
+export interface ReassignSharedBatchInput extends SharedBatchReassignmentInput {
+  assignment: Assignment;
+  newBranchName: string;
+}
+
+export interface ReassignSharedBatchResult {
+  sharedBatch: SharedBatch;
+  assignment: Assignment;
+  audit: SharedBatchReassignmentAudit;
+}
+
+export function assignSharedBatchToBranch(input: AssignSharedBatchInput): AssignSharedBatchResult {
   if (input.actorRole !== "DIRECT_REMIT_OFFICER") {
     throw new Error("Only the Direct Remit Officer may assign an unassigned Shared Batch.");
   }
@@ -16,6 +47,15 @@ export function assignSharedBatchToBranch(input: SharedBatchAssignmentInput): Sh
 
   const assignedAt = new Date().toISOString();
 
+  const assignment = createAssignment({
+    sharedBatch: input.sharedBatch,
+    beneficiaries: input.beneficiaries,
+    branchId: input.branchId,
+    branchName: input.branchName,
+    assignedBy: input.assignedByUserId,
+    assignedAt,
+  });
+
   return {
     sharedBatch: {
       ...input.sharedBatch,
@@ -24,14 +64,15 @@ export function assignSharedBatchToBranch(input: SharedBatchAssignmentInput): Sh
       assignedBranchId: input.branchId,
       assignedByUserId: input.assignedByUserId,
       assignedAt,
-      assignedBeneficiaries: input.sharedBatch.totalBeneficiaries,
+      assignedBeneficiaries: assignment.assignedTransactions.length,
       isLocked: true,
     },
+    assignment,
     audit: null,
   };
 }
 
-export function reassignSharedBatch(input: SharedBatchReassignmentInput): SharedBatchAssignmentResult {
+export function reassignSharedBatch(input: ReassignSharedBatchInput): ReassignSharedBatchResult {
   if (input.actorRole !== "OPERATIONS_MANAGER") {
     throw new Error("Only the Operations Manager may reassign a Shared Batch.");
   }
@@ -47,18 +88,26 @@ export function reassignSharedBatch(input: SharedBatchReassignmentInput): Shared
   const reassignedAt = new Date().toISOString();
   const previousBranchId = input.sharedBatch.assignedBranchId;
 
+  const assignment: Assignment = {
+    ...input.assignment,
+    assignedBranchId: input.newBranchId,
+    assignedBranchName: input.newBranchName,
+    assignedAt: reassignedAt,
+  };
+
   return {
     sharedBatch: {
       ...input.sharedBatch,
       assignmentStatus: "ASSIGNED",
       lifecycleStatus: "ASSIGNED",
       assignedBranchId: input.newBranchId,
-      assignedBeneficiaries: input.sharedBatch.totalBeneficiaries,
+      assignedBeneficiaries: assignment.assignedTransactions.length,
       isLocked: true,
       lastReassignedByUserId: input.reassignedByUserId,
       lastReassignedAt: reassignedAt,
       lastReassignmentReason: input.reason,
     },
+    assignment,
     audit: {
       sharedBatchId: input.sharedBatch.id,
       previousBranchId,

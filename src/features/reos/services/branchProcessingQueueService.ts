@@ -1,3 +1,4 @@
+import { getAssignment, getSharedBatch, updateSharedBatchLifecycleStatus } from "./sharedBatchStore";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type { ProofOfPayment } from "../types/proofOfPayment";
@@ -49,6 +50,18 @@ export function hydrateBranchProcessingQueue(branchId: string, assignments: Assi
   const otherBranchItems = branchProcessingQueueState.filter((item) => item.branchId !== branchId);
   branchProcessingQueueState.splice(0, branchProcessingQueueState.length, ...otherBranchItems, ...nextItems);
   branchProcessingStatusState.delete(branchId);
+
+  // A branch accepting its assigned transactions into the processing queue is the
+  // point at which the underlying Shared Batch is accepted into workflow (LIFECYCLE.md
+  // ASSIGNED -> PROCESSING). Only advances batches still at ASSIGNED.
+  assignments.forEach((assignment) => {
+    const sharedBatch = getSharedBatch(assignment.sharedBatchId);
+
+    if (sharedBatch && sharedBatch.lifecycleStatus === "ASSIGNED") {
+      updateSharedBatchLifecycleStatus(assignment.sharedBatchId, "PROCESSING");
+    }
+  });
+
   return getBranchProcessingQueue(branchId);
 }
 
@@ -190,5 +203,23 @@ export function finalizeBranchProcessing(branchId: string): BranchProcessingStat
   }
 
   branchProcessingStatusState.set(branchId, "COMPLETED");
+
+  // Mirror the branch-level completion into the Shared Batch lifecycle (LIFECYCLE.md
+  // PROCESSING -> COMPLETED) so Proof Management can pick up the batch. Only advances
+  // batches still at PROCESSING.
+  const sharedBatchIds = new Set(
+    getBranchProcessingQueue(branchId)
+      .map((item) => getAssignment(item.assignmentId)?.sharedBatchId)
+      .filter((sharedBatchId): sharedBatchId is string => Boolean(sharedBatchId)),
+  );
+
+  sharedBatchIds.forEach((sharedBatchId) => {
+    const sharedBatch = getSharedBatch(sharedBatchId);
+
+    if (sharedBatch && sharedBatch.lifecycleStatus === "PROCESSING") {
+      updateSharedBatchLifecycleStatus(sharedBatchId, "COMPLETED");
+    }
+  });
+
   return "COMPLETED";
 }

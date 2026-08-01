@@ -26,6 +26,7 @@ Only after reading these three, inspect implementation files.
 - CODING_RULES.md - engineering standards and technology stack.
 - WORKFLOW.md - implementation workflow and required reporting.
 - UI_GUIDELINES.md - UI, component, and report layout conventions.
+- PROOF_MANAGEMENT.md - canonical architecture and design reference for the Proof Management module (Sprint 14).
 - ROADMAP.md - sprint sequencing and completed work.
 - MODULE_STATUS.md - status of every REOS module.
 - TECH_DEBT.md - known technical debt.

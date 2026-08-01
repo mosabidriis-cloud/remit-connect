@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { BatchDownloadActions } from "../components/BatchDownloadActions";
 import { BatchDownloadSummary } from "../components/BatchDownloadSummary";
 import { EmptyState } from "../components/common/EmptyState";
@@ -8,12 +8,14 @@ import { PageHeader } from "../components/common/PageHeader";
 import { DownloadHistory } from "../components/DownloadHistory";
 import { ProofDownloadPanel } from "../components/ProofDownloadPanel";
 import {
+  buildProofDownloadBatchFromSharedBatch,
   downloadIndividualProof,
   downloadProofZip,
   getBatchDownloadSummary,
   getDownloadableProofs,
   markBatchDownloaded,
 } from "../services/proofDownloadService";
+import { getSharedBatch, updateSharedBatchLifecycleStatus } from "../services/sharedBatchStore";
 import type {
   DownloadableProof,
   ProofDownloadActorRole,
@@ -29,8 +31,16 @@ type ProofDownloadLocationState = {
 
 export function ProofDownloadPage() {
   const location = useLocation();
+  const { batchId } = useParams();
   const state = location.state as ProofDownloadLocationState | null;
-  const [batch, setBatch] = useState<ProofDownloadBatch | null>(state?.batch ?? null);
+  const [batch, setBatch] = useState<ProofDownloadBatch | null>(() => {
+    if (state?.batch) {
+      return state.batch;
+    }
+
+    const sharedBatch = batchId ? getSharedBatch(batchId) : null;
+    return sharedBatch ? buildProofDownloadBatchFromSharedBatch(sharedBatch) : null;
+  });
   const [history, setHistory] = useState<ProofDownloadHistoryEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
@@ -89,6 +99,7 @@ export function ProofDownloadPage() {
         actorRole,
       });
 
+      updateSharedBatchLifecycleStatus(result.batch.id, "DOWNLOADED");
       setBatch(result.batch);
       setHistory((currentHistory) => [result.history, ...currentHistory]);
       setMessage("Shared Batch marked as DOWNLOADED.");
