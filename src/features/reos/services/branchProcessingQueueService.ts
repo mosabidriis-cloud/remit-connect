@@ -3,6 +3,8 @@ import type { Beneficiary } from "../types/beneficiary";
 
 export type BranchProcessingQueueStatus = "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "ON_HOLD" | "RETURNED";
 
+export type BranchProcessingStatus = "PROCESSING" | "READY_FOR_PROOF";
+
 export interface BranchProcessingQueueItem {
   id: string;
   assignmentId: string;
@@ -11,25 +13,40 @@ export interface BranchProcessingQueueItem {
   status: BranchProcessingQueueStatus;
 }
 
+export interface BranchProcessingQueueSummary {
+  assigned: number;
+  inProgress: number;
+  completed: number;
+  onHold: number;
+  returned: number;
+  remaining: number;
+  total: number;
+  completionPercentage: number;
+}
+
 const branchProcessingQueueState: BranchProcessingQueueItem[] = [];
+const branchProcessingStatusState = new Map<string, BranchProcessingStatus>();
 
 export function resetBranchProcessingQueue() {
   branchProcessingQueueState.length = 0;
+  branchProcessingStatusState.clear();
 }
 
-export function hydrateBranchProcessingQueue(assignments: Assignment[]) {
+export function hydrateBranchProcessingQueue(branchId: string, assignments: Assignment[]) {
   const nextItems = assignments.flatMap((assignment) =>
     (assignment.assignedTransactions ?? []).map((beneficiary) => ({
       id: `${assignment.id}-${beneficiary.id}`,
       assignmentId: assignment.id,
-      branchId: assignment.assignedBranchId ?? "",
+      branchId,
       beneficiary,
       status: "ASSIGNED" as BranchProcessingQueueStatus,
     })),
   );
 
-  branchProcessingQueueState.splice(0, branchProcessingQueueState.length, ...nextItems);
-  return branchProcessingQueueState.slice();
+  const otherBranchItems = branchProcessingQueueState.filter((item) => item.branchId !== branchId);
+  branchProcessingQueueState.splice(0, branchProcessingQueueState.length, ...otherBranchItems, ...nextItems);
+  branchProcessingStatusState.delete(branchId);
+  return getBranchProcessingQueue(branchId);
 }
 
 export function getBranchProcessingQueue(branchId: string): BranchProcessingQueueItem[] {
@@ -59,6 +76,10 @@ export function updateBranchProcessingQueueItemStatus(itemId: string, status: Br
     return null;
   }
 
+  if (getBranchProcessingStatus(matchingItem.branchId) === "READY_FOR_PROOF") {
+    return matchingItem;
+  }
+
   if (!canTransitionToStatus(matchingItem.status, status)) {
     return matchingItem;
   }
@@ -67,14 +88,35 @@ export function updateBranchProcessingQueueItemStatus(itemId: string, status: Br
   return matchingItem;
 }
 
-export function getBranchProcessingQueueSummary(branchId: string) {
+export function getBranchProcessingQueueSummary(branchId: string): BranchProcessingQueueSummary {
   const queueItems = getBranchProcessingQueue(branchId);
 
-  return {
-    assigned: queueItems.filter((item) => item.status === "ASSIGNED").length,
-    inProgress: queueItems.filter((item) => item.status === "IN_PROGRESS").length,
-    completed: queueItems.filter((item) => item.status === "COMPLETED").length,
-    onHold: queueItems.filter((item) => item.status === "ON_HOLD").length,
-    returned: queueItems.filter((item) => item.status === "RETURNED").length,
-  };
+  const assigned = queueItems.filter((item) => item.status === "ASSIGNED").length;
+  const inProgress = queueItems.filter((item) => item.status === "IN_PROGRESS").length;
+  const completed = queueItems.filter((item) => item.status === "COMPLETED").length;
+  const onHold = queueItems.filter((item) => item.status === "ON_HOLD").length;
+  const returned = queueItems.filter((item) => item.status === "RETURNED").length;
+  const total = queueItems.length;
+  const remaining = assigned + inProgress + onHold;
+  const completionPercentage = total === 0 ? 0 : Math.round(((completed + returned) / total) * 100);
+
+  return { assigned, inProgress, completed, onHold, returned, remaining, total, completionPercentage };
+}
+
+export function isBranchProcessingComplete(branchId: string): boolean {
+  const summary = getBranchProcessingQueueSummary(branchId);
+  return summary.total > 0 && summary.assigned === 0 && summary.inProgress === 0 && summary.onHold === 0;
+}
+
+export function getBranchProcessingStatus(branchId: string): BranchProcessingStatus {
+  return branchProcessingStatusState.get(branchId) ?? "PROCESSING";
+}
+
+export function finalizeBranchProcessing(branchId: string): BranchProcessingStatus | null {
+  if (!isBranchProcessingComplete(branchId)) {
+    return null;
+  }
+
+  branchProcessingStatusState.set(branchId, "READY_FOR_PROOF");
+  return "READY_FOR_PROOF";
 }
