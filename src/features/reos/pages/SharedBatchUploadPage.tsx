@@ -1,36 +1,78 @@
-import { useState } from "react";
-import { BeneficiaryImportTable } from "../components/BeneficiaryImportTable";
+import { useEffect, useMemo, useState } from "react";
+import { BatchSummary } from "../components/BatchSummary";
+import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
-import { SharedBatchReadinessNotice } from "../components/SharedBatchReadinessNotice";
-import { SharedBatchSummary } from "../components/SharedBatchSummary";
-import { SharedBatchUploadForm } from "../components/SharedBatchUploadForm";
-import { SharedBatchValidationSummary } from "../components/SharedBatchValidationSummary";
-import { importSharedBatch } from "../services/sharedBatchService";
-import type { SharedBatchImportResult } from "../types/sharedBatchImport";
+import { UploadProgress } from "../components/UploadProgress";
+import { UploadZone } from "../components/UploadZone";
+import { ValidationErrors } from "../components/ValidationErrors";
+import { ValidationSummary } from "../components/ValidationSummary";
+
+const mockedSummary = {
+  batchReference: "DRB-2026-0148",
+  uploadDate: "2026-08-01 10:15",
+  uploadedBy: "Direct Remit Officer",
+  totalRecords: 248,
+  validRecords: 232,
+  manualReview: 7,
+  duplicates: 3,
+  invalidRecords: 6,
+  status: "Ready for Review",
+  readyForAssignment: true,
+};
+
+const mockedIssues = [
+  { id: "1", field: "Beneficiary Name", message: "Missing value for one record in the draft file.", severity: "WARNING" as const },
+  { id: "2", field: "Account Number", message: "Two entries appear to be malformed and need review.", severity: "ERROR" as const },
+];
 
 export function SharedBatchUploadPage() {
-  const [importResult, setImportResult] = useState<SharedBatchImportResult | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isValidationComplete, setIsValidationComplete] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!isUploading) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setProgress((current) => {
+        if (current >= 100) {
+          window.clearInterval(timer);
+          setIsUploading(false);
+          setIsValidationComplete(true);
+          return 100;
+        }
+
+        return current + 20;
+      });
+    }, 220);
+
+    return () => window.clearInterval(timer);
+  }, [isUploading]);
 
   const handleUpload = (file: File) => {
-    setFileError(null);
-
-    void file
-      .text()
-      .then((fileContent) => {
-        setImportResult(
-          importSharedBatch({
-            fileName: file.name,
-            fileContent,
-            uploadedByUserId: "DIRECT_REMIT_OFFICER",
-          }),
-        );
-      })
-      .catch(() => {
-        setFileError("Unable to read the selected Direct Remit batch file.");
-      });
+    setSelectedFileName(file.name);
+    setProgress(0);
+    setIsValidationComplete(false);
+    setIsUploading(true);
+    setShowConfirmDialog(false);
   };
+
+  const stage = useMemo(() => {
+    if (isUploading) {
+      return "uploading" as const;
+    }
+
+    if (isValidationComplete) {
+      return "ready" as const;
+    }
+
+    return "idle" as const;
+  }, [isUploading, isValidationComplete]);
 
   return (
     <PageContainer>
@@ -38,21 +80,49 @@ export function SharedBatchUploadPage() {
         description="Upload and validate a Direct Remit batch for branch assignment readiness."
         title="Shared Batch Upload"
       />
-      <SharedBatchUploadForm onUpload={handleUpload} />
-      {fileError ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">{fileError}</div>
-      ) : null}
-      {importResult ? (
+      <UploadZone isUploading={isUploading} onFileSelected={handleUpload} selectedFileName={selectedFileName} />
+      <UploadProgress progress={progress} stage={stage} />
+      {isValidationComplete ? (
         <>
-          <SharedBatchSummary sharedBatch={importResult.sharedBatch} />
-          <SharedBatchReadinessNotice
-            canCreateSharedBatch={importResult.canCreateSharedBatch}
-            manualReviewCount={importResult.sharedBatch.manualReviewCount}
+          <ValidationSummary summary={mockedSummary} />
+          <ValidationErrors issues={mockedIssues} />
+          <BatchSummary
+            summary={{
+              batchReference: mockedSummary.batchReference,
+              fileName: selectedFileName ?? "direct-remit-batch.csv",
+              totalRecords: mockedSummary.totalRecords,
+              validRecords: mockedSummary.validRecords,
+              status: mockedSummary.status,
+              readyForAssignment: mockedSummary.readyForAssignment,
+            }}
           />
-          <SharedBatchValidationSummary issues={importResult.validationIssues} />
-          <BeneficiaryImportTable beneficiaries={importResult.beneficiaries} />
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setShowConfirmDialog(true)}
+              style={{
+                backgroundColor: mockedSummary.readyForAssignment ? "#2563EB" : "#F59E0B",
+                border: "none",
+                borderRadius: 4,
+                color: "#FFFFFF",
+                cursor: "pointer",
+                padding: "10px 16px",
+              }}
+              type="button"
+            >
+              Confirm Upload
+            </button>
+          </div>
         </>
       ) : null}
+      <ConfirmUploadDialog
+        onCancel={() => setShowConfirmDialog(false)}
+        onConfirm={() => {
+          setShowConfirmDialog(false);
+          setIsValidationComplete(true);
+        }}
+        open={showConfirmDialog}
+        summary={{ batchReference: mockedSummary.batchReference, fileName: selectedFileName ?? "direct-remit-batch.csv", readyForAssignment: mockedSummary.readyForAssignment }}
+      />
     </PageContainer>
   );
 }
