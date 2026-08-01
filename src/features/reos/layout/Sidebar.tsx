@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import Badge from "../../../components/ui/Badge";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import { LogoPlaceholder } from "./LogoPlaceholder";
 
 export type SidebarItem = {
@@ -98,8 +99,9 @@ export function Sidebar({ collapsed }: SidebarProps) {
       className={`hidden border-r border-slate-200 bg-white shadow-sm shadow-slate-200/60 transition-[width] duration-300 ease-in-out md:flex md:min-h-screen md:flex-col ${
         collapsed ? "md:w-20" : "md:w-72"
       }`}
+      style={{ backgroundColor: colors.surface, borderRight: `1px solid ${colors.border}`, boxShadow: shadows.panel }}
     >
-      <div className="flex h-16 items-center border-b border-slate-200 px-4">
+      <div className="flex h-16 items-center border-b border-slate-200 px-4" style={{ borderBottom: `1px solid ${colors.border}` }}>
         <LogoPlaceholder collapsed={collapsed} />
       </div>
 
@@ -110,6 +112,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
               className={`mb-2 overflow-hidden px-2 text-xs font-semibold uppercase tracking-normal text-slate-500 transition-all duration-300 ${
                 collapsed ? "h-0 opacity-0" : "h-5 opacity-100"
               }`}
+              style={{ color: colors.muted, fontSize: typography.caption, paddingLeft: spacing.sm, paddingRight: spacing.sm }}
             >
                 {section.label}
             </div>
@@ -126,6 +129,12 @@ export function Sidebar({ collapsed }: SidebarProps) {
                         : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                     } ${collapsed ? "justify-center" : ""}`}
                     key={item.label}
+                    style={{
+                      borderRadius: radius.sm,
+                      color: active ? colors.surface : colors.slate700,
+                      backgroundColor: active ? colors.slate950 : "transparent",
+                      boxShadow: active ? shadows.sm : "none",
+                    }}
                     title={collapsed ? item.label : undefined}
                     to={item.href}
                   >
@@ -133,11 +142,17 @@ export function Sidebar({ collapsed }: SidebarProps) {
                       className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-400 transition-opacity duration-200 ${
                         active ? "opacity-100" : "opacity-0"
                       }`}
+                      style={{ backgroundColor: colors.success, borderRadius: radius.sm }}
                     />
                     <span
                       className={`grid h-7 w-7 shrink-0 place-items-center rounded text-xs transition-colors ${
                         active ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-white"
                       }`}
+                      style={{
+                        borderRadius: radius.sm,
+                        backgroundColor: active ? "rgba(255,255,255,0.15)" : colors.slate100,
+                        color: active ? colors.surface : colors.slate600,
+                      }}
                     >
                       {getInitials(item.label)}
                     </span>
@@ -157,7 +172,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
       </nav>
 
       {!collapsed ? (
-        <div className="border-t border-slate-200 p-4">
+        <div className="border-t border-slate-200 p-4" style={{ borderTop: `1px solid ${colors.border}`, padding: spacing.lg }}>
           <Badge color="blue" text="Sprint 10" />
         </div>
       ) : null}
