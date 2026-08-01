@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { BatchSummary } from "../components/BatchSummary";
+import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
 import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
@@ -8,6 +9,8 @@ import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
 import { validateExcelUpload } from "../services/excelValidationService";
+import { spacing } from "../theme";
+import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
 export function SharedBatchUploadPage() {
@@ -32,6 +35,8 @@ export function SharedBatchUploadPage() {
     batchStatus: string;
   } | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isAssignmentConfirmed, setIsAssignmentConfirmed] = useState(false);
+  const [assignableBeneficiaries, setAssignableBeneficiaries] = useState<Beneficiary[]>([]);
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -43,6 +48,8 @@ export function SharedBatchUploadPage() {
     setValidationSummary(null);
     setSharedBatch(null);
     setIsConfirmed(false);
+    setIsAssignmentConfirmed(false);
+    setAssignableBeneficiaries([]);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
@@ -52,6 +59,7 @@ export function SharedBatchUploadPage() {
       setValidationSummary(result.summary);
       setValidationIssues(result.issues);
       setSharedBatch(result.sharedBatch);
+      setAssignableBeneficiaries(result.beneficiaries);
       setProgress(100);
       setIsUploading(false);
       setIsValidationComplete(true);
@@ -78,7 +86,7 @@ export function SharedBatchUploadPage() {
   const confirmedSummary = validationSummary
     ? {
         ...validationSummary,
-        batchStatus: isConfirmed ? "READY_FOR_ASSIGNMENT" : validationSummary.batchStatus,
+        batchStatus: isAssignmentConfirmed ? "ASSIGNED" : isConfirmed ? "READY_FOR_ASSIGNMENT" : validationSummary.batchStatus,
         processingMode: "Process Valid Transactions Only",
       }
     : null;
@@ -140,6 +148,20 @@ export function SharedBatchUploadPage() {
           {isConfirmed ? (
             <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", padding: 16 }}>
               Ready transactions are now available for the future Branch Assignment module. Manual review and invalid transactions remain in this batch and are excluded from the assignment queue.
+            </div>
+          ) : null}
+          {isConfirmed && sharedBatch ? (
+            <div style={{ marginTop: spacing.lg }}>
+              <BranchAssignmentPanel
+                beneficiaries={assignableBeneficiaries}
+                isAssignmentConfirmed={isAssignmentConfirmed}
+                onConfirm={(branchId) => {
+                  setSharedBatch((current) => current ? { ...current, assignmentStatus: "ASSIGNED", assignedBranchId: branchId, assignedBeneficiaries: assignableBeneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT").length } : current);
+                  setValidationSummary((current) => current ? { ...current, batchStatus: "ASSIGNED" } : current);
+                  setIsAssignmentConfirmed(true);
+                }}
+                sharedBatch={sharedBatch}
+              />
             </div>
           ) : null}
         </>
