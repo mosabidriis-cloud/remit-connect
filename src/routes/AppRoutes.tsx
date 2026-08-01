@@ -13,7 +13,12 @@ import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPa
 import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
 import CreditAccountBatchViewPage from "../pages/credit-account/CreditAccountBatchViewPage";
 import { ReosLayout } from "../features/reos/layouts/ReosLayout";
+import { BranchAssignmentPage } from "../features/reos/pages/BranchAssignmentPage";
+import { BranchProcessingPage } from "../features/reos/pages/BranchProcessingPage";
 import { ProofDownloadPage } from "../features/reos/pages/ProofDownloadPage";
+import { ReportsPage } from "../features/reos/pages/ReportsPage";
+import { SharedBatchUploadPage } from "../features/reos/pages/SharedBatchUploadPage";
+import { TransactionProcessingPage } from "../features/reos/pages/TransactionProcessingPage";
 import { UserCreatePage } from "../features/reos/pages/UserCreatePage";
 import { UserDetailsPage } from "../features/reos/pages/UserDetailsPage";
 import { UserEditPage } from "../features/reos/pages/UserEditPage";
@@ -68,11 +73,61 @@ export default function AppRoutes() {
         }
       />
       <Route
+        path="/reos/reports"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <ReportsPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
+        path="/reos/shared-batches/upload"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <SharedBatchUploadPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
+        path="/reos/shared-batches/assignment"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <BranchAssignmentPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
         path="/reos/shared-batches/:batchId/proof-download"
         element={
           <ProtectedReosRoute>
             <ReosLayout>
               <ProofDownloadPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
+        path="/reos/branches/:branchId/processing"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <BranchProcessingPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
+        path="/reos/branches/:branchId/processing/:batchId/transactions/:transactionId"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <TransactionProcessingPage />
             </ReosLayout>
           </ProtectedReosRoute>
         }

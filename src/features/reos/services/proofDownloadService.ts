@@ -60,6 +60,24 @@ export function buildProofDownloadBatchFromSharedBatch(sharedBatch: SharedBatch)
   };
 }
 
+/**
+ * Moves a Shared Batch from COMPLETED to READY_FOR_DOWNLOAD (LIFECYCLE.md), making it
+ * eligible for the next Proof Management step. Direct Remit Officer only, matching
+ * LIFECYCLE.md's Role Ownership for this transition.
+ */
+export function markSharedBatchReadyForDownload(request: ProofDownloadRequest): ProofDownloadBatch {
+  assertDirectRemitOfficer(request.actorRole);
+
+  if (request.batch.lifecycleStatus !== "COMPLETED") {
+    throw new Error("Only completed batches may be marked ready for proof download.");
+  }
+
+  return {
+    ...request.batch,
+    lifecycleStatus: "READY_FOR_DOWNLOAD",
+  };
+}
+
 function toTransactionStatus(status: BranchProcessingQueueStatus): CreditToAccountTransactionStatus {
   if (status === "COMPLETED") {
     return "COMPLETED";

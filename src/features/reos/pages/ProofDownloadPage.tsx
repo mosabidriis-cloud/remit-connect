@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { BatchDownloadActions } from "../components/BatchDownloadActions";
 import { BatchDownloadSummary } from "../components/BatchDownloadSummary";
@@ -14,6 +14,7 @@ import {
   getBatchDownloadSummary,
   getDownloadableProofs,
   markBatchDownloaded,
+  markSharedBatchReadyForDownload,
 } from "../services/proofDownloadService";
 import { getSharedBatch, updateSharedBatchLifecycleStatus } from "../services/sharedBatchStore";
 import type {
@@ -24,7 +25,6 @@ import type {
 } from "../types/proofDownload";
 
 type ProofDownloadLocationState = {
-  batch?: ProofDownloadBatch;
   actorUserId?: string;
   actorRole?: ProofDownloadActorRole;
 };
@@ -34,10 +34,6 @@ export function ProofDownloadPage() {
   const { batchId } = useParams();
   const state = location.state as ProofDownloadLocationState | null;
   const [batch, setBatch] = useState<ProofDownloadBatch | null>(() => {
-    if (state?.batch) {
-      return state.batch;
-    }
-
     const sharedBatch = batchId ? getSharedBatch(batchId) : null;
     return sharedBatch ? buildProofDownloadBatchFromSharedBatch(sharedBatch) : null;
   });
@@ -49,6 +45,25 @@ export function ProofDownloadPage() {
   const actorCanDownload = actorRole === "DIRECT_REMIT_OFFICER";
   const summary = useMemo(() => (batch ? getBatchDownloadSummary(batch) : null), [batch]);
   const downloadableProofs = useMemo(() => (batch ? getDownloadableProofs(batch) : []), [batch]);
+
+  // Opening Proof Management for a COMPLETED batch performs the approved
+  // COMPLETED -> READY_FOR_DOWNLOAD transition (LIFECYCLE.md). Only the Direct Remit
+  // Officer may trigger it, so a read-only Operations Manager viewing the page does
+  // not advance the lifecycle. Re-runs are inert: after the transition the batch is
+  // no longer COMPLETED.
+  useEffect(() => {
+    if (!batch || batch.lifecycleStatus !== "COMPLETED" || !actorCanDownload) {
+      return;
+    }
+
+    try {
+      const readyBatch = markSharedBatchReadyForDownload({ batch, actorUserId, actorRole });
+      updateSharedBatchLifecycleStatus(readyBatch.id, "READY_FOR_DOWNLOAD");
+      setBatch(readyBatch);
+    } catch (caughtError) {
+      setMessage(caughtError instanceof Error ? caughtError.message : "Unable to open the proof download workflow.");
+    }
+  }, [batch, actorCanDownload, actorUserId, actorRole]);
 
   const handleDownloadZip = async () => {
     if (!batch) {
