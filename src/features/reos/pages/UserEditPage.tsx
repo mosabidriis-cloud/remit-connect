@@ -32,15 +32,25 @@ export function UserEditPage() {
   };
 
   if (!user) {
-    return <p className="text-sm text-slate-600">User not found.</p>;
+    return (
+      <section className="mx-auto grid w-full max-w-7xl gap-6">
+        <header className="border-b border-slate-200 pb-4">
+          <h1 className="text-2xl font-semibold text-slate-950">Edit User</h1>
+          <p className="mt-1 text-sm text-slate-600">Update an internal REOS user account.</p>
+        </header>
+        <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
+          User not found.
+        </div>
+      </section>
+    );
   }
 
   return (
-    <section className="grid gap-6">
-      <div>
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
+      <header className="border-b border-slate-200 pb-4">
         <h1 className="text-2xl font-semibold text-slate-950">Edit User</h1>
-        <p className="text-sm text-slate-600">{user.fullName}</p>
-      </div>
+        <p className="mt-1 text-sm text-slate-600">{user.fullName}</p>
+      </header>
       <UserForm initialUser={user} submitLabel="Save User" onSubmit={handleSubmit} />
     </section>
   );

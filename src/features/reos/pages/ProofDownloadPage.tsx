@@ -96,11 +96,11 @@ export function ProofDownloadPage() {
 
   if (!batch || !summary) {
     return (
-      <section className="grid gap-6">
-        <div>
+      <section className="mx-auto grid w-full max-w-7xl gap-6">
+        <header className="border-b border-slate-200 pb-4">
           <h1 className="text-2xl font-semibold text-slate-950">Proof Download</h1>
-          <p className="text-sm text-slate-600">Open a completed Shared Batch to view its download summary.</p>
-        </div>
+          <p className="mt-1 text-sm text-slate-600">Open a completed Shared Batch to view its download summary.</p>
+        </header>
         <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
           No completed batch is selected for proof download.
         </div>
@@ -109,11 +109,11 @@ export function ProofDownloadPage() {
   }
 
   return (
-    <section className="grid gap-6">
-      <div>
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
+      <header className="border-b border-slate-200 pb-4">
         <h1 className="text-2xl font-semibold text-slate-950">Proof Download</h1>
-        <p className="text-sm text-slate-600">Download proof-of-payment files for completed Shared Batches.</p>
-      </div>
+        <p className="mt-1 text-sm text-slate-600">Download proof-of-payment files for completed Shared Batches.</p>
+      </header>
       {!actorCanDownload ? (
         <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           Operations Manager access is read-only for proof download monitoring.

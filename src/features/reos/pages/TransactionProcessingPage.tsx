@@ -170,8 +170,11 @@ export function TransactionProcessingPage() {
 
   if (!transaction) {
     return (
-      <section className="grid gap-6">
-        <h1 className="text-2xl font-semibold text-slate-950">Transaction Processing</h1>
+      <section className="mx-auto grid w-full max-w-7xl gap-6">
+        <header className="border-b border-slate-200 pb-4">
+          <h1 className="text-2xl font-semibold text-slate-950">Transaction Processing</h1>
+          <p className="mt-1 text-sm text-slate-600">Process the selected assigned Credit-to-Account transaction.</p>
+        </header>
         <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
           No assigned transaction is selected.
         </div>
@@ -180,12 +183,16 @@ export function TransactionProcessingPage() {
   }
 
   return (
-    <section className="grid gap-6">
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
+      <header className="border-b border-slate-200 pb-4">
+        <h1 className="text-2xl font-semibold text-slate-950">Transaction Processing</h1>
+        <p className="mt-1 text-sm text-slate-600">Process the selected assigned Credit-to-Account transaction.</p>
+      </header>
       <ProcessingProgress currentPosition={currentPosition} totalTransactions={totalTransactions} />
       <TransactionCard transaction={transaction} />
       <ProofUpload onUpload={handleProofUpload} />
       <ProofGallery proofs={transaction.proofs} />
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
         <button
           className="rounded border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!canReturn}

@@ -33,7 +33,7 @@ export function OperationsDashboardPage() {
   };
 
   return (
-    <section className="grid gap-6 p-4">
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
       <DashboardHeader generatedAt={dashboard.generatedAt} role={dashboard.role} />
 
       {dashboard.role === "GENERAL_MANAGER" ? (

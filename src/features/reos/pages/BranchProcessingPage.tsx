@@ -15,11 +15,11 @@ export function BranchProcessingPage() {
   const returnReasons = getActiveReturnReasons();
 
   return (
-    <section className="grid gap-6">
-      <div>
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
+      <header className="border-b border-slate-200 pb-4">
         <h1 className="text-2xl font-semibold text-slate-950">Credit-to-Account Processing</h1>
-        <p className="text-sm text-slate-600">Branch {branchId} assigned batches only.</p>
-      </div>
+        <p className="mt-1 text-sm text-slate-600">Branch {branchId} assigned batches only.</p>
+      </header>
       {assignedBatches.length === 0 ? (
         <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
           No assigned batches are available for this branch.

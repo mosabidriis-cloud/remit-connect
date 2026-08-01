@@ -41,7 +41,7 @@ export function ReportsPage() {
   const selectedDefinition = result?.definition ?? firstDefinition;
 
   return (
-    <section className="grid gap-6 p-4">
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
       <ReportHeader
         businessQuestion={
           selectedDefinition?.description ??

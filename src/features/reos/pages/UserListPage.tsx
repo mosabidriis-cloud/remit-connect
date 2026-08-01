@@ -13,16 +13,16 @@ export function UserListPage() {
   }, []);
 
   return (
-    <section className="grid gap-6">
-      <div className="flex items-center justify-between gap-4">
+    <section className="mx-auto grid w-full max-w-7xl gap-6">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-950">User Management</h1>
-          <p className="text-sm text-slate-600">Manage internal REOS users.</p>
+          <p className="mt-1 text-sm text-slate-600">Manage internal REOS users.</p>
         </div>
         <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white" type="button" onClick={() => navigate("create")}>
           Create User
         </button>
-      </div>
+      </header>
       <UserTable users={users} onEditUser={(userId) => navigate(userId + "/edit")} onViewUser={(userId) => navigate(userId)} />
     </section>
   );
