@@ -2,41 +2,31 @@
 
 Version: 1.0
 
-Status: Active
+Status: IN PROGRESS
 
 ## Module
 
-Sprint 9 - Reporting Module
+Sprint 10 - Enterprise UI & Application Shell
 
 ## Authority
 
 This document is the authoritative definition for the active REOS module.
 
-REPORTING_STANDARDS.md is the canonical reporting standard for this sprint.
+## Sprint Goal
 
-## Business Goal
+Build the reusable REOS enterprise application shell and design system implementation while keeping all existing business functionality unchanged.
 
-Build the REOS Reporting Module using the canonical reporting standard.
+## Milestone 1
 
-Every report must answer one business question.
+Enterprise Application Shell
 
-Reports must use only the categories, layout, filters, export rules, table behavior, visibility guidance, and design principles defined in REPORTING_STANDARDS.md.
-
-## Users
-
-Recommended visibility is defined in REPORTING_STANDARDS.md.
-
-No new permissions are introduced in this sprint.
-
-## Scope
-
-Create operational reports only.
-
-Reports must follow REPORTING_STANDARDS.md.
-
-## Required Standard
-
-All reporting implementation must reference REPORTING_STANDARDS.md instead of duplicating reporting rules in this sprint document.
+- AppLayout
+- Sidebar
+- Header
+- Breadcrumbs
+- Search
+- User Menu
+- Route Integration
 
 ## Allowed Directories
 
@@ -44,15 +34,11 @@ src/features/reos
 
 docs/AI
 
-## Out of Scope
-
-Anything outside REPORTING_STANDARDS.md is out of scope unless explicitly approved by a future sprint.
-
 ## Acceptance Criteria
 
-- Module compiles.
+- Existing business functionality remains unchanged.
+- No services are modified.
+- No domain types are modified.
+- No workflows are modified.
+- Application shell compiles.
 - Production build succeeds.
-- No previous sprint functionality is modified.
-- No unrelated application modules are modified.
-- Reports follow REPORTING_STANDARDS.md.
-- Every report answers one business question.
