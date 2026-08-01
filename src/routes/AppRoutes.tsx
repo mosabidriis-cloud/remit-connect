@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
+const DEV_AUTH_KEY = "reos-auth";
+
 import LoginPage from "../pages/auth/LoginPage";
 import Dashboard from "../pages/controller/Dashboard";
 import BranchListPage from "../pages/branches/BranchListPage";
@@ -16,11 +18,20 @@ import { UserCreatePage } from "../features/reos/pages/UserCreatePage";
 import { UserDetailsPage } from "../features/reos/pages/UserDetailsPage";
 import { UserEditPage } from "../features/reos/pages/UserEditPage";
 import { UserListPage } from "../features/reos/pages/UserListPage";
+import { OperationsDashboardPage } from "../features/reos/pages/OperationsDashboardPage";
 
 function LegacyBranchRedirect() {
   const { branchId } = useParams();
 
   return <Navigate to={`/branch-liquidity/${branchId}`} replace />;
+}
+
+function ProtectedReosRoute({ children }: { children: React.ReactNode }) {
+  if (localStorage.getItem(DEV_AUTH_KEY) === "true") {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/login" replace />;
 }
 
 export default function AppRoutes() {
@@ -40,46 +51,70 @@ export default function AppRoutes() {
       />
       <Route
         path="/reos"
-        element={<Navigate to="/reos/administration/users" replace />}
+        element={
+          <ProtectedReosRoute>
+            <Navigate to="/reos/dashboard" replace />
+          </ProtectedReosRoute>
+        }
+      />
+      <Route
+        path="/reos/dashboard"
+        element={
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <OperationsDashboardPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
+        }
       />
       <Route
         path="/reos/shared-batches/:batchId/proof-download"
         element={
-          <ReosLayout>
-            <ProofDownloadPage />
-          </ReosLayout>
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <ProofDownloadPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
         }
       />
       <Route
         path="/reos/administration/users"
         element={
-          <ReosLayout>
-            <UserListPage />
-          </ReosLayout>
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <UserListPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
         }
       />
       <Route
         path="/reos/administration/users/create"
         element={
-          <ReosLayout>
-            <UserCreatePage />
-          </ReosLayout>
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <UserCreatePage />
+            </ReosLayout>
+          </ProtectedReosRoute>
         }
       />
       <Route
         path="/reos/administration/users/:userId"
         element={
-          <ReosLayout>
-            <UserDetailsPage />
-          </ReosLayout>
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <UserDetailsPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
         }
       />
       <Route
         path="/reos/administration/users/:userId/edit"
         element={
-          <ReosLayout>
-            <UserEditPage />
-          </ReosLayout>
+          <ProtectedReosRoute>
+            <ReosLayout>
+              <UserEditPage />
+            </ReosLayout>
+          </ProtectedReosRoute>
         }
       />
 

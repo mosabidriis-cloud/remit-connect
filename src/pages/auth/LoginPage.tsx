@@ -1,17 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import TextInput from "../../components/forms/TextInput";
 
+const DEV_AUTH_KEY = "reos-auth";
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem(DEV_AUTH_KEY) === "true") {
+      navigate("/reos/dashboard", { replace: true });
+    }
+  }, [navigate]);
 
   function handleLogin() {
-    console.log({
-      username,
-      password,
-    });
+    localStorage.setItem(DEV_AUTH_KEY, "true");
+    navigate("/reos/dashboard", { replace: true });
   }
 
   return (
