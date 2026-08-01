@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { colors, radius, spacing, typography } from "../../theme";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -15,27 +16,34 @@ type DataTableProps<T> = {
 
 export function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+    <div
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        overflowX: "auto",
+      }}
+    >
+      <table className="min-w-full text-sm" style={{ borderCollapse: "collapse", color: colors.text }}>
+        <thead style={{ backgroundColor: colors.slate50, color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
           <tr>
             {columns.map((column) => (
               <th
-                className={`px-4 py-3 ${column.align === "right" ? "text-right" : ""}`}
                 key={column.key}
+                style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: column.align === "right" ? "right" : "left" }}
               >
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {rows.map((row) => (
-            <tr key={getRowKey(row)}>
+            <tr key={getRowKey(row)} style={{ borderTop: `1px solid ${colors.slate100}` }}>
               {columns.map((column) => (
                 <td
-                  className={`px-4 py-3 ${column.align === "right" ? "text-right" : "text-slate-700"}`}
                   key={column.key}
+                  style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: column.align === "right" ? "right" : "left" }}
                 >
                   {column.render(row)}
                 </td>

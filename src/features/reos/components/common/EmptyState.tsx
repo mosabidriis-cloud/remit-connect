@@ -1,10 +1,21 @@
+import { colors, radius, spacing, typography } from "../../theme";
+
 type EmptyStateProps = {
   message: string;
 };
 
 export function EmptyState({ message }: EmptyStateProps) {
   return (
-    <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
+    <div
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        color: colors.muted,
+        fontSize: typography.small,
+        padding: spacing.xl,
+      }}
+    >
       {message}
     </div>
   );
