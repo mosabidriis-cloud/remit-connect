@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AssignmentSummary } from "../components/AssignmentSummary";
 import { BatchSummary } from "../components/BatchSummary";
 import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
 import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
@@ -38,6 +39,7 @@ export function SharedBatchUploadPage() {
   } | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isAssignmentConfirmed, setIsAssignmentConfirmed] = useState(false);
+  const [isAssignmentFinalized, setIsAssignmentFinalized] = useState(false);
   const [assignableBeneficiaries, setAssignableBeneficiaries] = useState<Beneficiary[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignedBeneficiaryIds, setAssignedBeneficiaryIds] = useState<string[]>([]);
@@ -58,6 +60,7 @@ export function SharedBatchUploadPage() {
     setAssignments([]);
     setAssignedBeneficiaryIds([]);
     setAssignment(null);
+    setIsAssignmentFinalized(false);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
@@ -165,7 +168,8 @@ export function SharedBatchUploadPage() {
                 assignments={assignments}
                 assignedBeneficiaryIds={assignedBeneficiaryIds}
                 beneficiaries={assignableBeneficiaries}
-                isAssignmentConfirmed={isAssignmentConfirmed}
+                isAssignmentConfirmed={isAssignmentFinalized}
+                isReadOnly={isAssignmentFinalized}
                 onConfirm={(branchId) => {
                   const remainingReadyTransactions = assignableBeneficiaries.filter(
                     (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
@@ -193,6 +197,7 @@ export function SharedBatchUploadPage() {
                   setAssignment(nextAssignment);
                   setAssignments(nextAssignments);
                   setAssignedBeneficiaryIds(nextAssignedBeneficiaryIds);
+                  setIsAssignmentFinalized(true);
                   setSharedBatch((current) => current ? {
                     ...current,
                     assignmentStatus: "ASSIGNED",
@@ -207,6 +212,14 @@ export function SharedBatchUploadPage() {
                 }}
                 sharedBatch={sharedBatch}
               />
+              {isAssignmentFinalized ? (
+                <AssignmentSummary
+                  assignments={assignments}
+                  invalidCount={assignableBeneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length}
+                  manualReviewCount={assignableBeneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length}
+                  sharedBatch={sharedBatch}
+                />
+              ) : null}
             </div>
           ) : null}
         </>

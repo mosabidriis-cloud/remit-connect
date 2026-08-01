@@ -12,6 +12,7 @@ type BranchAssignmentPanelProps = {
   assignedBeneficiaryIds: string[];
   onConfirm: (branchId: string) => void;
   isAssignmentConfirmed: boolean;
+  isReadOnly?: boolean;
 };
 
 const branchOptions = [
@@ -21,7 +22,7 @@ const branchOptions = [
   { id: "KOSTI", label: "Kosti Branch" },
 ];
 
-export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, assignments, assignedBeneficiaryIds, onConfirm, isAssignmentConfirmed }: BranchAssignmentPanelProps) {
+export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, assignments, assignedBeneficiaryIds, onConfirm, isAssignmentConfirmed, isReadOnly = false }: BranchAssignmentPanelProps) {
   const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0].id);
 
   const pendingReadyTransactions = useMemo(
@@ -69,6 +70,7 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
             Assigned Branch
           </label>
           <select
+            disabled={isReadOnly}
             id="branch-select"
             onChange={(event) => setSelectedBranchId(event.target.value)}
             style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: "8px 10px", width: "100%" }}
@@ -148,7 +150,7 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: spacing.lg }}>
         <button
-          disabled={!canConfirm}
+          disabled={!canConfirm || isReadOnly}
           onClick={() => onConfirm(selectedBranchId)}
           style={{
             backgroundColor: canConfirm ? colors.primary : colors.slate200,
@@ -160,13 +162,13 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
           }}
           type="button"
         >
-          {hasAssignments ? "Confirm Another Assignment" : "Confirm Assignment"}
+          {isReadOnly ? "Assignments Locked" : hasAssignments ? "Confirm Another Assignment" : "Confirm Assignment"}
         </button>
       </div>
 
       {isAssignmentConfirmed ? (
         <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", marginTop: spacing.lg, padding: 16 }}>
-          Assignment group created. The batch now contains {assignments.length} branch assignment group{assignments.length === 1 ? "" : "s"}.
+          Assignment groups are now locked for this session. The batch contains {assignments.length} branch assignment group{assignments.length === 1 ? "" : "s"}.
         </div>
       ) : null}
     </div>
