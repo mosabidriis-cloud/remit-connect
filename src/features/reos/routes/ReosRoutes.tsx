@@ -1,5 +1,5 @@
 import type { RouteObject } from "react-router-dom";
-import { ReosLayout } from "../layouts/ReosLayout";
+import { AppLayout } from "../layout/AppLayout";
 import { BranchAssignmentPage } from "../pages/BranchAssignmentPage";
 import { BranchProcessingPage } from "../pages/BranchProcessingPage";
 import { OperationsDashboardPage } from "../pages/OperationsDashboardPage";
@@ -16,89 +16,89 @@ export const reosRoutes: RouteObject[] = [
   {
     path: "reos/dashboard",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <OperationsDashboardPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/reports",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <ReportsPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/branches/:branchId/processing",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <BranchProcessingPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/branches/:branchId/processing/:batchId/transactions/:transactionId",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <TransactionProcessingPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/shared-batches/:batchId/proof-download",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <ProofDownloadPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/shared-batches/assignment",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <BranchAssignmentPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/shared-batches/upload",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <SharedBatchUploadPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/administration/users",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <UserListPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/administration/users/create",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <UserCreatePage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/administration/users/:userId",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <UserDetailsPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
   {
     path: "reos/administration/users/:userId/edit",
     element: (
-      <ReosLayout>
+      <AppLayout>
         <UserEditPage />
-      </ReosLayout>
+      </AppLayout>
     ),
   },
 ];
