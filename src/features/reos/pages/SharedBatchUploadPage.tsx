@@ -28,7 +28,10 @@ export function SharedBatchUploadPage() {
     invalidRecords: number;
     status: string;
     readyForAssignment: boolean;
+    processingMode: string;
+    batchStatus: string;
   } | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -39,6 +42,7 @@ export function SharedBatchUploadPage() {
     setValidationIssues([]);
     setValidationSummary(null);
     setSharedBatch(null);
+    setIsConfirmed(false);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
@@ -71,6 +75,16 @@ export function SharedBatchUploadPage() {
     return "idle" as const;
   }, [isUploading, isValidationComplete]);
 
+  const confirmedSummary = validationSummary
+    ? {
+        ...validationSummary,
+        batchStatus: isConfirmed ? "READY_FOR_ASSIGNMENT" : validationSummary.batchStatus,
+        processingMode: "Process Valid Transactions Only",
+      }
+    : null;
+
+  const canConfirm = Boolean(validationSummary && validationSummary.validRecords > 0);
+
   return (
     <PageContainer>
       <PageHeader
@@ -84,43 +98,60 @@ export function SharedBatchUploadPage() {
           {validationError}
         </div>
       ) : null}
-      {validationSummary && sharedBatch ? (
+      {confirmedSummary && sharedBatch ? (
         <>
-          <ValidationSummary summary={validationSummary} />
+          <ValidationSummary summary={confirmedSummary} />
           <ValidationErrors issues={validationIssues} />
           <BatchSummary
             summary={{
               batchReference: sharedBatch.reference,
               fileName: sharedBatch.fileName,
               totalRecords: sharedBatch.totalBeneficiaries,
-              validRecords: validationSummary.validRecords,
-              status: validationSummary.status,
-              readyForAssignment: validationSummary.readyForAssignment,
+              validRecords: confirmedSummary.validRecords,
+              status: confirmedSummary.status,
+              readyForAssignment: confirmedSummary.readyForAssignment,
+              uploadDate: confirmedSummary.uploadDate,
+              uploadedBy: confirmedSummary.uploadedBy,
+              manualReview: confirmedSummary.manualReview,
+              invalidRecords: confirmedSummary.invalidRecords,
+              processingMode: confirmedSummary.processingMode,
+              batchStatus: confirmedSummary.batchStatus,
+              isLocked: sharedBatch.isLocked,
             }}
           />
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
+              disabled={!canConfirm || isConfirmed}
               onClick={() => setShowConfirmDialog(true)}
               style={{
-                backgroundColor: validationSummary.readyForAssignment ? "#2563EB" : "#F59E0B",
+                backgroundColor: canConfirm && !isConfirmed ? "#2563EB" : "#9CA3AF",
                 border: "none",
                 borderRadius: 4,
                 color: "#FFFFFF",
-                cursor: "pointer",
+                cursor: canConfirm && !isConfirmed ? "pointer" : "not-allowed",
+                opacity: isConfirmed ? 0.8 : 1,
                 padding: "10px 16px",
               }}
               type="button"
             >
-              Confirm Upload
+              {isConfirmed ? "Upload Confirmed" : "Confirm Upload"}
             </button>
           </div>
+          {isConfirmed ? (
+            <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", padding: 16 }}>
+              Ready transactions are now available for the future Branch Assignment module. Manual review and invalid transactions remain in this batch and are excluded from the assignment queue.
+            </div>
+          ) : null}
         </>
       ) : null}
       <ConfirmUploadDialog
+        canConfirm={canConfirm}
         onCancel={() => setShowConfirmDialog(false)}
         onConfirm={() => {
           setShowConfirmDialog(false);
-          setIsValidationComplete(true);
+          setSharedBatch((current) => current ? { ...current, isLocked: true } : current);
+          setValidationSummary((current) => current ? { ...current, batchStatus: "READY_FOR_ASSIGNMENT", processingMode: "Process Valid Transactions Only" } : current);
+          setIsConfirmed(true);
         }}
         open={showConfirmDialog}
         summary={{ batchReference: validationSummary?.batchReference ?? "Uploaded Batch", fileName: selectedFileName ?? "direct-remit-batch.xlsx", readyForAssignment: validationSummary?.readyForAssignment ?? false }}

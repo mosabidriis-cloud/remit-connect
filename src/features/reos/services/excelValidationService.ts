@@ -20,6 +20,8 @@ export type ExcelValidationSummary = {
   invalidRecords: number;
   status: string;
   readyForAssignment: boolean;
+  processingMode: string;
+  batchStatus: string;
 };
 
 export type ExcelValidationResult = {
@@ -208,7 +210,7 @@ function createValidationSummary(sharedBatch: SharedBatch, beneficiaries: Benefi
   const manualReview = beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length;
   const invalidRecords = beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length;
   const duplicates = sharedBatch.duplicateReferenceCount;
-  const readyForAssignment = validRecords > 0 && invalidRecords === 0 && manualReview === 0;
+  const readyForAssignment = validRecords > 0;
   const status = invalidRecords > 0
     ? "Processed Valid Transactions Only"
     : manualReview > 0
@@ -226,6 +228,8 @@ function createValidationSummary(sharedBatch: SharedBatch, beneficiaries: Benefi
     invalidRecords,
     status,
     readyForAssignment,
+    processingMode: "Process Valid Transactions Only",
+    batchStatus: readyForAssignment ? "READY_FOR_ASSIGNMENT" : "PENDING_REVIEW",
   };
 }
 

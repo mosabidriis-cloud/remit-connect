@@ -4,6 +4,7 @@ type ConfirmUploadDialogProps = {
   open: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  canConfirm: boolean;
   summary: {
     batchReference: string;
     fileName: string;
@@ -11,7 +12,7 @@ type ConfirmUploadDialogProps = {
   };
 };
 
-export function ConfirmUploadDialog({ open, onCancel, onConfirm, summary }: ConfirmUploadDialogProps) {
+export function ConfirmUploadDialog({ open, onCancel, onConfirm, canConfirm, summary }: ConfirmUploadDialogProps) {
   if (!open) {
     return null;
   }
@@ -49,7 +50,7 @@ export function ConfirmUploadDialog({ open, onCancel, onConfirm, summary }: Conf
           <button onClick={onCancel} style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.sm, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
             Cancel
           </button>
-          <button onClick={onConfirm} style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
+          <button disabled={!canConfirm} onClick={onConfirm} style={{ backgroundColor: canConfirm ? colors.primary : colors.slate200, border: "none", borderRadius: radius.sm, color: canConfirm ? colors.surface : colors.muted, cursor: canConfirm ? "pointer" : "not-allowed", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
             Confirm Upload
           </button>
         </div>
