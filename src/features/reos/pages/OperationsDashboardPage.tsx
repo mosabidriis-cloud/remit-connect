@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { BranchPerformanceTable } from "../components/BranchPerformanceTable";
+import { KpiCard } from "../components/common/KpiCard";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import { CriticalAlertCard } from "../components/CriticalAlertCard";
-import { DashboardHeader } from "../components/DashboardHeader";
-import { DashboardStatCard } from "../components/DashboardStatCard";
 import { ExceptionCenter } from "../components/ExceptionCenter";
 import { TodaySummary } from "../components/TodaySummary";
 import { WorkQueueTable } from "../components/WorkQueueTable";
@@ -33,8 +34,17 @@ export function OperationsDashboardPage() {
   };
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <DashboardHeader generatedAt={dashboard.generatedAt} role={dashboard.role} />
+    <PageContainer>
+      <PageHeader
+        actions={
+          <div className="text-right text-sm text-slate-600">
+            <div className="font-medium text-slate-900">{formatRole(dashboard.role)}</div>
+            <div>Updated {formatDateTime(dashboard.generatedAt)}</div>
+          </div>
+        }
+        description="What requires the Operations Manager's attention right now?"
+        title="Operations Command Center"
+      />
 
       {dashboard.role === "GENERAL_MANAGER" ? (
         <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -50,7 +60,7 @@ export function OperationsDashboardPage() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {dashboard.stats.map((stat) => (
-          <DashboardStatCard key={stat.id} stat={stat} />
+          <KpiCard detail={stat.detail} key={stat.id} label={stat.label} value={stat.value} />
         ))}
       </section>
 
@@ -58,6 +68,17 @@ export function OperationsDashboardPage() {
       <WorkQueueTable items={dashboard.workQueue} />
       <ExceptionCenter items={dashboard.exceptions} onDrillDown={handleDrillDown} />
       <TodaySummary metrics={dashboard.todaySummary} />
-    </section>
+    </PageContainer>
   );
+}
+
+function formatRole(role: OperationsDashboardRole): string {
+  return role === "GENERAL_MANAGER" ? "General Manager Overview" : "Operations Manager";
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }

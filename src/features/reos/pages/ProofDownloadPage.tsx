@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { BatchDownloadActions } from "../components/BatchDownloadActions";
 import { BatchDownloadSummary } from "../components/BatchDownloadSummary";
+import { EmptyState } from "../components/common/EmptyState";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import { DownloadHistory } from "../components/DownloadHistory";
 import { ProofDownloadPanel } from "../components/ProofDownloadPanel";
 import {
@@ -96,24 +99,22 @@ export function ProofDownloadPage() {
 
   if (!batch || !summary) {
     return (
-      <section className="mx-auto grid w-full max-w-7xl gap-6">
-        <header className="border-b border-slate-200 pb-4">
-          <h1 className="text-2xl font-semibold text-slate-950">Proof Download</h1>
-          <p className="mt-1 text-sm text-slate-600">Open a completed Shared Batch to view its download summary.</p>
-        </header>
-        <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          No completed batch is selected for proof download.
-        </div>
-      </section>
+      <PageContainer>
+        <PageHeader
+          description="Open a completed Shared Batch to view its download summary."
+          title="Proof Download"
+        />
+        <EmptyState message="No completed batch is selected for proof download." />
+      </PageContainer>
     );
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <header className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-950">Proof Download</h1>
-        <p className="mt-1 text-sm text-slate-600">Download proof-of-payment files for completed Shared Batches.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        description="Download proof-of-payment files for completed Shared Batches."
+        title="Proof Download"
+      />
       {!actorCanDownload ? (
         <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           Operations Manager access is read-only for proof download monitoring.
@@ -135,6 +136,6 @@ export function ProofDownloadPage() {
         onDownloadProof={handleDownloadProof}
       />
       <DownloadHistory history={history} />
-    </section>
+    </PageContainer>
   );
 }

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { FilterBar } from "../components/common/FilterBar";
+import { PageContainer } from "../components/common/PageContainer";
 import { ReportExportActions } from "../components/reports/ReportExportActions";
 import { ReportFilters } from "../components/reports/ReportFilters";
 import { ReportHeader } from "../components/reports/ReportHeader";
@@ -41,7 +43,7 @@ export function ReportsPage() {
   const selectedDefinition = result?.definition ?? firstDefinition;
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
+    <PageContainer>
       <ReportHeader
         businessQuestion={
           selectedDefinition?.description ??
@@ -52,11 +54,13 @@ export function ReportsPage() {
         name={selectedDefinition?.name ?? "Reports"}
       />
 
-      <ReportFilters
-        definitions={definitions}
-        filters={filters}
-        onChange={setFilters}
-      />
+      <FilterBar>
+        <ReportFilters
+          definitions={definitions}
+          filters={filters}
+          onChange={setFilters}
+        />
+      </FilterBar>
 
       {!filtersAreValid ? (
         <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -75,7 +79,7 @@ export function ReportsPage() {
       />
 
       <ReportExportActions />
-    </section>
+    </PageContainer>
   );
 }
 

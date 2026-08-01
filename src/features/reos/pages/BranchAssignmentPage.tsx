@@ -2,6 +2,8 @@ import { useState } from "react";
 import { BranchAssignedBatchView } from "../components/BranchAssignedBatchView";
 import { BranchAssignmentForm, type BranchAssignmentFormValues } from "../components/BranchAssignmentForm";
 import { BranchAssignmentStatus } from "../components/BranchAssignmentStatus";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import {
   assignSharedBatchToBranch,
   getSharedBatchesVisibleToBranchOfficer,
@@ -44,15 +46,15 @@ export function BranchAssignmentPage() {
   };
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <header className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-950">Branch Assignment</h1>
-        <p className="mt-1 text-sm text-slate-600">Manually assign one Shared Batch to exactly one branch.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        description="Manually assign one Shared Batch to exactly one branch."
+        title="Branch Assignment"
+      />
       <BranchAssignmentForm onSubmit={handleSubmit} />
       <BranchAssignmentStatus audit={audit} error={error} sharedBatch={sharedBatch} />
       <BranchAssignedBatchView branchId={sharedBatch?.assignedBranchId ?? ""} sharedBatches={visibleBatches} />
-    </section>
+    </PageContainer>
   );
 }
 

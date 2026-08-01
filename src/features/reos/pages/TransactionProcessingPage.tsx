@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { EmptyState } from "../components/common/EmptyState";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import { ProcessingProgress } from "../components/ProcessingProgress";
 import { ProofGallery } from "../components/ProofGallery";
 import { ProofUpload } from "../components/ProofUpload";
@@ -170,24 +173,22 @@ export function TransactionProcessingPage() {
 
   if (!transaction) {
     return (
-      <section className="mx-auto grid w-full max-w-7xl gap-6">
-        <header className="border-b border-slate-200 pb-4">
-          <h1 className="text-2xl font-semibold text-slate-950">Transaction Processing</h1>
-          <p className="mt-1 text-sm text-slate-600">Process the selected assigned Credit-to-Account transaction.</p>
-        </header>
-        <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          No assigned transaction is selected.
-        </div>
-      </section>
+      <PageContainer>
+        <PageHeader
+          description="Process the selected assigned Credit-to-Account transaction."
+          title="Transaction Processing"
+        />
+        <EmptyState message="No assigned transaction is selected." />
+      </PageContainer>
     );
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <header className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-950">Transaction Processing</h1>
-        <p className="mt-1 text-sm text-slate-600">Process the selected assigned Credit-to-Account transaction.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        description="Process the selected assigned Credit-to-Account transaction."
+        title="Transaction Processing"
+      />
       <ProcessingProgress currentPosition={currentPosition} totalTransactions={totalTransactions} />
       <TransactionCard transaction={transaction} />
       <ProofUpload onUpload={handleProofUpload} />
@@ -228,6 +229,6 @@ export function TransactionProcessingPage() {
           </ul>
         </div>
       ) : null}
-    </section>
+    </PageContainer>
   );
 }

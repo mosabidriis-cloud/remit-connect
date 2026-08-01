@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BeneficiaryImportTable } from "../components/BeneficiaryImportTable";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import { SharedBatchReadinessNotice } from "../components/SharedBatchReadinessNotice";
 import { SharedBatchSummary } from "../components/SharedBatchSummary";
 import { SharedBatchUploadForm } from "../components/SharedBatchUploadForm";
@@ -31,11 +33,11 @@ export function SharedBatchUploadPage() {
   };
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <header className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-950">Shared Batch Upload</h1>
-        <p className="mt-1 text-sm text-slate-600">Upload and validate a Direct Remit batch for branch assignment readiness.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        description="Upload and validate a Direct Remit batch for branch assignment readiness."
+        title="Shared Batch Upload"
+      />
       <SharedBatchUploadForm onUpload={handleUpload} />
       {fileError ? (
         <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">{fileError}</div>
@@ -51,6 +53,6 @@ export function SharedBatchUploadPage() {
           <BeneficiaryImportTable beneficiaries={importResult.beneficiaries} />
         </>
       ) : null}
-    </section>
+    </PageContainer>
   );
 }

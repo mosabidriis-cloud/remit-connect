@@ -1,4 +1,8 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { DataTable, type DataTableColumn } from "../components/common/DataTable";
+import { EmptyState } from "../components/common/EmptyState";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageHeader } from "../components/common/PageHeader";
 import { getActiveReturnReasons } from "../services/transactionProcessingService";
 import type { BranchProcessingBatch } from "../types/transactionProcessing";
 
@@ -13,64 +17,62 @@ export function BranchProcessingPage() {
   const state = location.state as BranchProcessingLocationState | null;
   const assignedBatches = (state?.batches ?? []).filter((batch) => batch.assignedBranchId === branchId);
   const returnReasons = getActiveReturnReasons();
+  const columns: DataTableColumn<BranchProcessingBatch>[] = [
+    {
+      key: "reference",
+      header: "Batch Reference",
+      render: (batch) => <span className="font-medium text-slate-900">{batch.reference}</span>,
+    },
+    {
+      key: "transactions",
+      header: "Transactions",
+      render: (batch) => batch.totalTransactions,
+    },
+    {
+      key: "position",
+      header: "Current Position",
+      render: (batch) => `${batch.currentPosition} / ${batch.totalTransactions}`,
+    },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      render: (batch) => (
+        <button
+          className="text-sm font-medium text-blue-700"
+          disabled={batch.transactions.length === 0}
+          onClick={() =>
+            navigate(`/reos/branches/${branchId}/processing/${batch.id}/transactions/${batch.transactions[0]?.id ?? ""}`, {
+              state: {
+                batch,
+                transaction: batch.transactions[0],
+                transactionIndex: 0,
+                currentPosition: 1,
+                totalTransactions: batch.totalTransactions,
+                returnReasons,
+                branchOfficerUserId: "BRANCH_OFFICER",
+              },
+            })
+          }
+          type="button"
+        >
+          Open
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <section className="mx-auto grid w-full max-w-7xl gap-6">
-      <header className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-950">Credit-to-Account Processing</h1>
-        <p className="mt-1 text-sm text-slate-600">Branch {branchId} assigned batches only.</p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        description={`Branch ${branchId} assigned batches only.`}
+        title="Credit-to-Account Processing"
+      />
       {assignedBatches.length === 0 ? (
-        <div className="rounded border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          No assigned batches are available for this branch.
-        </div>
+        <EmptyState message="No assigned batches are available for this branch." />
       ) : (
-        <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
-              <tr>
-                <th className="px-4 py-3">Batch Reference</th>
-                <th className="px-4 py-3">Transactions</th>
-                <th className="px-4 py-3">Current Position</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {assignedBatches.map((batch) => (
-                <tr key={batch.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{batch.reference}</td>
-                  <td className="px-4 py-3 text-slate-700">{batch.totalTransactions}</td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {batch.currentPosition} / {batch.totalTransactions}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      className="text-sm font-medium text-blue-700"
-                      disabled={batch.transactions.length === 0}
-                      onClick={() =>
-                        navigate(`/reos/branches/${branchId}/processing/${batch.id}/transactions/${batch.transactions[0]?.id ?? ""}`, {
-                          state: {
-                            batch,
-                            transaction: batch.transactions[0],
-                            transactionIndex: 0,
-                            currentPosition: 1,
-                            totalTransactions: batch.totalTransactions,
-                            returnReasons,
-                            branchOfficerUserId: "BRANCH_OFFICER",
-                          },
-                        })
-                      }
-                      type="button"
-                    >
-                      Open
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable columns={columns} getRowKey={(batch) => batch.id} rows={assignedBatches} />
       )}
-    </section>
+    </PageContainer>
   );
 }
