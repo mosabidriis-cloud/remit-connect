@@ -23,7 +23,7 @@ export function createAssignment(input: CreateAssignmentInput): Assignment {
   );
 
   return {
-    id: `${input.sharedBatch.id}-assignment`,
+    id: `${input.sharedBatch.id}-${input.branchId}-${Date.now()}`,
     sharedBatchId: input.sharedBatch.id,
     batchReference: input.sharedBatch.reference,
     assignedBranchId: input.branchId,

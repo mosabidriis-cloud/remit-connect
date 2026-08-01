@@ -8,6 +8,8 @@ type BranchAssignmentPanelProps = {
   beneficiaries: Beneficiary[];
   sharedBatch: SharedBatch;
   assignment: Assignment | null;
+  assignments: Assignment[];
+  assignedBeneficiaryIds: string[];
   onConfirm: (branchId: string) => void;
   isAssignmentConfirmed: boolean;
 };
@@ -19,25 +21,33 @@ const branchOptions = [
   { id: "KOSTI", label: "Kosti Branch" },
 ];
 
-export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, onConfirm, isAssignmentConfirmed }: BranchAssignmentPanelProps) {
+export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, assignments, assignedBeneficiaryIds, onConfirm, isAssignmentConfirmed }: BranchAssignmentPanelProps) {
   const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0].id);
 
-  const readyTransactions = useMemo(
-    () => (assignment?.assignedTransactions ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT")),
-    [assignment, beneficiaries],
+  const pendingReadyTransactions = useMemo(
+    () => beneficiaries.filter(
+      (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
+    ),
+    [assignedBeneficiaryIds, beneficiaries],
   );
 
   const manualReviewCount = useMemo(
-    () => assignment?.manualReviewCount ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length,
-    [assignment, beneficiaries],
+    () => beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length,
+    [beneficiaries],
   );
 
   const invalidCount = useMemo(
-    () => assignment?.invalidCount ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length,
-    [assignment, beneficiaries],
+    () => beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length,
+    [beneficiaries],
   );
 
-  const canConfirm = Boolean(readyTransactions.length > 0 && selectedBranchId && !isAssignmentConfirmed);
+  const assignedTransactionCount = useMemo(
+    () => assignments.reduce((total, currentAssignment) => total + currentAssignment.assignedTransactions.length, 0),
+    [assignments],
+  );
+
+  const canConfirm = Boolean(pendingReadyTransactions.length > 0 && selectedBranchId);
+  const hasAssignments = assignments.length > 0;
 
   return (
     <div
@@ -59,7 +69,6 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
             Assigned Branch
           </label>
           <select
-            disabled={isAssignmentConfirmed}
             id="branch-select"
             onChange={(event) => setSelectedBranchId(event.target.value)}
             style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: "8px 10px", width: "100%" }}
@@ -74,7 +83,7 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Ready for Assignment</div>
-          <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{readyTransactions.length}</div>
+          <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{pendingReadyTransactions.length}</div>
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Manual Review</div>
@@ -89,22 +98,43 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
       <div style={{ backgroundColor: colors.blue50, border: `1px solid ${colors.border}`, borderRadius: radius.sm, marginTop: spacing.lg, padding: spacing.md }}>
         <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Assignment Summary</div>
         <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
-          Batch {sharedBatch.reference} will assign {readyTransactions.length} ready transactions to {branchOptions.find((branch) => branch.id === selectedBranchId)?.label ?? selectedBranchId}.
+          Batch {sharedBatch.reference} currently has {assignments.length} assignment group{assignments.length === 1 ? "" : "s"} and {assignedTransactionCount} assigned transaction{assignedTransactionCount === 1 ? "" : "s"}.
+        </div>
+        <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+          {pendingReadyTransactions.length} ready transaction{pendingReadyTransactions.length === 1 ? "" : "s"} remain available for assignment.
         </div>
         {assignment ? (
           <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
-            Assignment ID: {assignment.id} • Status: {assignment.status}
+            Latest assignment ID: {assignment.id} • Status: {assignment.status}
           </div>
         ) : null}
       </div>
 
       <div style={{ marginTop: spacing.lg }}>
-        <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Ready Transactions</div>
-        {readyTransactions.length === 0 ? (
-          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>No ready transactions are available for assignment yet.</div>
+        <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Assignment Groups</div>
+        {assignments.length === 0 ? (
+          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>No branch assignment groups have been created yet.</div>
         ) : (
           <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
-            {readyTransactions.map((beneficiary) => (
+            {assignments.map((currentAssignment) => (
+              <div key={currentAssignment.id} style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}>
+                <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{currentAssignment.assignedBranchName ?? currentAssignment.assignedBranchId}</div>
+                <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+                  {currentAssignment.assignedTransactions.length} transaction{currentAssignment.assignedTransactions.length === 1 ? "" : "s"} assigned • {currentAssignment.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: spacing.lg }}>
+        <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Pending Ready Transactions</div>
+        {pendingReadyTransactions.length === 0 ? (
+          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>All ready transactions are already assigned to a branch group.</div>
+        ) : (
+          <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
+            {pendingReadyTransactions.map((beneficiary) => (
               <div key={beneficiary.id} style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}>
                 <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{beneficiary.directRemitReference}</div>
                 <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
@@ -130,13 +160,13 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
           }}
           type="button"
         >
-          {isAssignmentConfirmed ? "Assignment Confirmed" : "Confirm Assignment"}
+          {hasAssignments ? "Confirm Another Assignment" : "Confirm Assignment"}
         </button>
       </div>
 
       {isAssignmentConfirmed ? (
         <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", marginTop: spacing.lg, padding: 16 }}>
-          Assignment confirmed. The batch is now assigned to {branchOptions.find((branch) => branch.id === selectedBranchId)?.label ?? selectedBranchId}.
+          Assignment group created. The batch now contains {assignments.length} branch assignment group{assignments.length === 1 ? "" : "s"}.
         </div>
       ) : null}
     </div>

@@ -39,6 +39,8 @@ export function SharedBatchUploadPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isAssignmentConfirmed, setIsAssignmentConfirmed] = useState(false);
   const [assignableBeneficiaries, setAssignableBeneficiaries] = useState<Beneficiary[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignedBeneficiaryIds, setAssignedBeneficiaryIds] = useState<string[]>([]);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -53,6 +55,8 @@ export function SharedBatchUploadPage() {
     setIsConfirmed(false);
     setIsAssignmentConfirmed(false);
     setAssignableBeneficiaries([]);
+    setAssignments([]);
+    setAssignedBeneficiaryIds([]);
     setAssignment(null);
     setIsValidationComplete(false);
     setIsUploading(true);
@@ -158,24 +162,42 @@ export function SharedBatchUploadPage() {
             <div style={{ marginTop: spacing.lg }}>
               <BranchAssignmentPanel
                 assignment={assignment}
+                assignments={assignments}
+                assignedBeneficiaryIds={assignedBeneficiaryIds}
                 beneficiaries={assignableBeneficiaries}
                 isAssignmentConfirmed={isAssignmentConfirmed}
                 onConfirm={(branchId) => {
+                  const remainingReadyTransactions = assignableBeneficiaries.filter(
+                    (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
+                  );
+
+                  if (remainingReadyTransactions.length === 0) {
+                    return;
+                  }
+
                   const nextAssignment = createAssignment({
                     sharedBatch,
-                    beneficiaries: assignableBeneficiaries,
+                    beneficiaries: remainingReadyTransactions,
                     branchId,
                     branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
                     assignedBy: "current-user",
                     assignedAt: new Date().toISOString(),
                   });
 
+                  const nextAssignments = [...assignments, nextAssignment];
+                  const nextAssignedBeneficiaryIds = [
+                    ...assignedBeneficiaryIds,
+                    ...nextAssignment.assignedTransactions.map((beneficiary) => beneficiary.id),
+                  ];
+
                   setAssignment(nextAssignment);
+                  setAssignments(nextAssignments);
+                  setAssignedBeneficiaryIds(nextAssignedBeneficiaryIds);
                   setSharedBatch((current) => current ? {
                     ...current,
                     assignmentStatus: "ASSIGNED",
                     assignedBranchId: nextAssignment.assignedBranchId,
-                    assignedBeneficiaries: nextAssignment.readyTransactionCount,
+                    assignedBeneficiaries: nextAssignments.reduce((total, currentAssignment) => total + currentAssignment.assignedTransactions.length, 0),
                     assignedByUserId: nextAssignment.assignedBy,
                     assignedAt: nextAssignment.assignedAt,
                     isLocked: true,
