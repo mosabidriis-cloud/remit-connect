@@ -1,78 +1,83 @@
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { DataTable, type DataTableColumn } from "../components/common/DataTable";
-import { EmptyState } from "../components/common/EmptyState";
+import { useMemo } from "react";
+import { useParams } from "react-router-dom";
+import { BranchProcessingQueue } from "../components/BranchProcessingQueue";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
-import { getActiveReturnReasons } from "../services/transactionProcessingService";
-import type { BranchProcessingBatch } from "../types/transactionProcessing";
+import type { Assignment } from "../types/assignment";
 
-type BranchProcessingLocationState = {
-  batches?: BranchProcessingBatch[];
-};
+const sampleAssignments: Assignment[] = [
+  {
+    id: "assignment-1",
+    sharedBatchId: "batch-1",
+    batchReference: "BATCH-001",
+    assignedBranchId: "PORT_SUDAN",
+    assignedBranchName: "Port Sudan Branch",
+    assignedBy: "officer-1",
+    assignedAt: "2026-08-01T00:00:00.000Z",
+    readyTransactionCount: 2,
+    manualReviewCount: 0,
+    invalidCount: 0,
+    assignedTransactions: [
+      {
+        id: "txn-1",
+        directRemitReference: "REF-001",
+        transactionDate: "2026-08-01",
+        beneficiaryName: "Amina Hassan",
+        currency: "SDG",
+        amount: 1250,
+        destinationCountry: "Sudan",
+        bankName: "Bank of Khartoum",
+        accountNumber: "1001",
+        sharedBatchId: "batch-1",
+        assignedBranchId: "PORT_SUDAN",
+        processingStatusId: "READY_FOR_ASSIGNMENT",
+        returnReasonId: null,
+        receiptUploaded: false,
+        manualReviewRequired: false,
+        manualReviewReason: null,
+      },
+      {
+        id: "txn-2",
+        directRemitReference: "REF-002",
+        transactionDate: "2026-08-01",
+        beneficiaryName: "Musa Ibrahim",
+        currency: "SDG",
+        amount: 980,
+        destinationCountry: "Sudan",
+        bankName: "Bank of Khartoum",
+        accountNumber: "1002",
+        sharedBatchId: "batch-1",
+        assignedBranchId: "PORT_SUDAN",
+        processingStatusId: "READY_FOR_ASSIGNMENT",
+        returnReasonId: null,
+        receiptUploaded: false,
+        manualReviewRequired: false,
+        manualReviewReason: null,
+      },
+    ],
+    manualReviewTransactions: [],
+    invalidTransactions: [],
+    status: "ASSIGNED",
+  },
+];
 
 export function BranchProcessingPage() {
-  const { branchId = "" } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const state = location.state as BranchProcessingLocationState | null;
-  const assignedBatches = (state?.batches ?? []).filter((batch) => batch.assignedBranchId === branchId);
-  const returnReasons = getActiveReturnReasons();
-  const columns: DataTableColumn<BranchProcessingBatch>[] = [
-    {
-      key: "reference",
-      header: "Batch Reference",
-      render: (batch) => <span className="font-medium text-slate-900">{batch.reference}</span>,
-    },
-    {
-      key: "transactions",
-      header: "Transactions",
-      render: (batch) => batch.totalTransactions,
-    },
-    {
-      key: "position",
-      header: "Current Position",
-      render: (batch) => `${batch.currentPosition} / ${batch.totalTransactions}`,
-    },
-    {
-      key: "action",
-      header: "Action",
-      align: "right",
-      render: (batch) => (
-        <button
-          className="text-sm font-medium text-blue-700"
-          disabled={batch.transactions.length === 0}
-          onClick={() =>
-            navigate(`/reos/branches/${branchId}/processing/${batch.id}/transactions/${batch.transactions[0]?.id ?? ""}`, {
-              state: {
-                batch,
-                transaction: batch.transactions[0],
-                transactionIndex: 0,
-                currentPosition: 1,
-                totalTransactions: batch.totalTransactions,
-                returnReasons,
-                branchOfficerUserId: "BRANCH_OFFICER",
-              },
-            })
-          }
-          type="button"
-        >
-          Open
-        </button>
-      ),
-    },
-  ];
+  const { branchId = "PORT_SUDAN" } = useParams();
+
+  const branchAssignments = useMemo(
+    () => sampleAssignments.filter((assignment) => assignment.assignedBranchId === branchId),
+    [branchId],
+  );
+
+  const branchName = branchAssignments[0]?.assignedBranchName ?? branchId;
 
   return (
     <PageContainer>
       <PageHeader
-        description={`Branch ${branchId} assigned batches only.`}
-        title="Credit-to-Account Processing"
+        description="Branch processing queue for the selected branch."
+        title="Branch Processing"
       />
-      {assignedBatches.length === 0 ? (
-        <EmptyState message="No assigned batches are available for this branch." />
-      ) : (
-        <DataTable columns={columns} getRowKey={(batch) => batch.id} rows={assignedBatches} />
-      )}
+      <BranchProcessingQueue assignments={branchAssignments} branchId={branchId} branchName={branchName} />
     </PageContainer>
   );
 }
