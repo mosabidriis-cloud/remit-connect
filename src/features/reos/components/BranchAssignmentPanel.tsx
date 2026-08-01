@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { colors, radius, spacing, typography } from "../theme";
+import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
 type BranchAssignmentPanelProps = {
   beneficiaries: Beneficiary[];
   sharedBatch: SharedBatch;
+  assignment: Assignment | null;
   onConfirm: (branchId: string) => void;
   isAssignmentConfirmed: boolean;
 };
@@ -17,22 +19,22 @@ const branchOptions = [
   { id: "KOSTI", label: "Kosti Branch" },
 ];
 
-export function BranchAssignmentPanel({ beneficiaries, sharedBatch, onConfirm, isAssignmentConfirmed }: BranchAssignmentPanelProps) {
+export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, onConfirm, isAssignmentConfirmed }: BranchAssignmentPanelProps) {
   const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0].id);
 
   const readyTransactions = useMemo(
-    () => beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT"),
-    [beneficiaries],
+    () => (assignment?.assignedTransactions ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT")),
+    [assignment, beneficiaries],
   );
 
   const manualReviewCount = useMemo(
-    () => beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length,
-    [beneficiaries],
+    () => assignment?.manualReviewCount ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length,
+    [assignment, beneficiaries],
   );
 
   const invalidCount = useMemo(
-    () => beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length,
-    [beneficiaries],
+    () => assignment?.invalidCount ?? beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length,
+    [assignment, beneficiaries],
   );
 
   const canConfirm = Boolean(readyTransactions.length > 0 && selectedBranchId && !isAssignmentConfirmed);
@@ -89,6 +91,11 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, onConfirm, i
         <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
           Batch {sharedBatch.reference} will assign {readyTransactions.length} ready transactions to {branchOptions.find((branch) => branch.id === selectedBranchId)?.label ?? selectedBranchId}.
         </div>
+        {assignment ? (
+          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+            Assignment ID: {assignment.id} • Status: {assignment.status}
+          </div>
+        ) : null}
       </div>
 
       <div style={{ marginTop: spacing.lg }}>

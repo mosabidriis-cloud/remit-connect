@@ -8,8 +8,10 @@ import { UploadProgress } from "../components/UploadProgress";
 import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
+import { createAssignment } from "../services/assignmentService";
 import { validateExcelUpload } from "../services/excelValidationService";
 import { spacing } from "../theme";
+import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
@@ -37,6 +39,7 @@ export function SharedBatchUploadPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isAssignmentConfirmed, setIsAssignmentConfirmed] = useState(false);
   const [assignableBeneficiaries, setAssignableBeneficiaries] = useState<Beneficiary[]>([]);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -50,6 +53,7 @@ export function SharedBatchUploadPage() {
     setIsConfirmed(false);
     setIsAssignmentConfirmed(false);
     setAssignableBeneficiaries([]);
+    setAssignment(null);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
@@ -153,10 +157,29 @@ export function SharedBatchUploadPage() {
           {isConfirmed && sharedBatch ? (
             <div style={{ marginTop: spacing.lg }}>
               <BranchAssignmentPanel
+                assignment={assignment}
                 beneficiaries={assignableBeneficiaries}
                 isAssignmentConfirmed={isAssignmentConfirmed}
                 onConfirm={(branchId) => {
-                  setSharedBatch((current) => current ? { ...current, assignmentStatus: "ASSIGNED", assignedBranchId: branchId, assignedBeneficiaries: assignableBeneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT").length } : current);
+                  const nextAssignment = createAssignment({
+                    sharedBatch,
+                    beneficiaries: assignableBeneficiaries,
+                    branchId,
+                    branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
+                    assignedBy: "current-user",
+                    assignedAt: new Date().toISOString(),
+                  });
+
+                  setAssignment(nextAssignment);
+                  setSharedBatch((current) => current ? {
+                    ...current,
+                    assignmentStatus: "ASSIGNED",
+                    assignedBranchId: nextAssignment.assignedBranchId,
+                    assignedBeneficiaries: nextAssignment.readyTransactionCount,
+                    assignedByUserId: nextAssignment.assignedBy,
+                    assignedAt: nextAssignment.assignedAt,
+                    isLocked: true,
+                  } : current);
                   setValidationSummary((current) => current ? { ...current, batchStatus: "ASSIGNED" } : current);
                   setIsAssignmentConfirmed(true);
                 }}
