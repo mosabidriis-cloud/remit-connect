@@ -1,4 +1,6 @@
 import { read, utils, type WorkSheet } from "xlsx";
+import type { Beneficiary } from "../types/beneficiary";
+import type { SharedBatch } from "../types/sharedBatch";
 
 export type ExcelValidationIssue = {
   id: string;
@@ -23,6 +25,8 @@ export type ExcelValidationSummary = {
 export type ExcelValidationResult = {
   summary: ExcelValidationSummary;
   issues: ExcelValidationIssue[];
+  sharedBatch: SharedBatch;
+  beneficiaries: Beneficiary[];
 };
 
 const requiredColumns = [
@@ -78,7 +82,8 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
 
   const dataRows = rows.slice(1).filter((row) => hasContent(row));
   const seenReferences = new Map<string, number>();
-  let duplicates = 0;
+  const beneficiaries: Beneficiary[] = [];
+  let duplicateRows = 0;
   let invalidRecords = 0;
   let validRecords = 0;
 
@@ -93,9 +98,10 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
 
     const referenceKey = stringifyValue(directRemitReference).trim().toLowerCase();
     const referenceSeenCount = seenReferences.get(referenceKey) ?? 0;
+    const isDuplicate = Boolean(referenceKey && referenceSeenCount > 0);
 
-    if (referenceKey && referenceSeenCount > 0) {
-      duplicates += 1;
+    if (isDuplicate) {
+      duplicateRows += 1;
       issues.push({
         id: `duplicate-${index}`,
         field: "Direct Remit Reference",
@@ -119,45 +125,107 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
     const numericAmount = Number(amountValue);
     const amountIsValid = amountValue.length > 0 && Number.isFinite(numericAmount);
 
+    let status: Beneficiary["processingStatusId"] = "READY_FOR_ASSIGNMENT";
+
     if (missingValues.length > 0 || !amountIsValid) {
       invalidRecords += 1;
+      status = "INVALID";
       issues.push({
         id: `row-${index}`,
         field: "Row Validation",
         message: `Row ${index + 2} is missing required information or contains an invalid amount.`,
         severity: "ERROR",
       });
-      return;
+    } else if (isDuplicate) {
+      status = "MANUAL_REVIEW";
+    } else {
+      validRecords += 1;
     }
 
-    if (referenceKey && referenceSeenCount > 0) {
-      return;
-    }
-
-    validRecords += 1;
+    const normalizedAmount = amountIsValid ? numericAmount : 0;
+    beneficiaries.push({
+      id: createBeneficiaryId(index),
+      directRemitReference: stringifyValue(directRemitReference),
+      transactionDate: "",
+      beneficiaryName: stringifyValue(beneficiaryName),
+      currency: stringifyValue(currency),
+      amount: normalizedAmount,
+      destinationCountry: "",
+      bankName: stringifyValue(bankName),
+      accountNumber: stringifyValue(accountNumber),
+      sharedBatchId: "",
+      assignedBranchId: null,
+      processingStatusId: status,
+      returnReasonId: status === "INVALID" ? "invalid-row" : null,
+      receiptUploaded: false,
+      manualReviewRequired: status === "MANUAL_REVIEW",
+      manualReviewReason: status === "MANUAL_REVIEW"
+        ? "Duplicate Direct Remit Reference requires manual review."
+        : status === "INVALID"
+          ? "Required row data is missing or invalid."
+          : null,
+    });
   });
 
-  const readyForAssignment = validRecords > 0 && invalidRecords === 0 && duplicates === 0;
+  const sharedBatch = createSharedBatch(file, beneficiaries, duplicateRows);
+  const summary = createValidationSummary(sharedBatch, beneficiaries);
+
+  return {
+    summary,
+    issues,
+    sharedBatch,
+    beneficiaries,
+  };
+}
+
+function createSharedBatch(file: File, beneficiaries: Beneficiary[], duplicateRows: number): SharedBatch {
+  return {
+    id: createBatchId(),
+    reference: createBatchReference(file.name),
+    fileName: file.name,
+    uploadDate: new Date().toISOString(),
+    uploadedByUserId: "local-validation-engine",
+    totalBeneficiaries: beneficiaries.length,
+    assignedBeneficiaries: 0,
+    completedBeneficiaries: 0,
+    returnedBeneficiaries: 0,
+    duplicateReferenceCount: duplicateRows,
+    manualReviewCount: beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length,
+    assignmentStatus: "UNASSIGNED",
+    lifecycleStatus: "ASSIGNED",
+    assignedBranchId: null,
+    assignedByUserId: null,
+    assignedAt: null,
+    isLocked: false,
+    lastReassignedByUserId: null,
+    lastReassignedAt: null,
+    lastReassignmentReason: null,
+  };
+}
+
+function createValidationSummary(sharedBatch: SharedBatch, beneficiaries: Beneficiary[]): ExcelValidationSummary {
+  const validRecords = beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT").length;
+  const manualReview = beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length;
+  const invalidRecords = beneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "INVALID").length;
+  const duplicates = sharedBatch.duplicateReferenceCount;
+  const readyForAssignment = validRecords > 0 && invalidRecords === 0 && manualReview === 0;
   const status = invalidRecords > 0
     ? "Processed Valid Transactions Only"
-    : duplicates > 0
+    : manualReview > 0
       ? "Manual Review Required"
       : "Ready for Assignment";
 
   return {
-    summary: {
-      batchReference: sanitizeBatchReference(file.name),
-      uploadDate: new Date().toLocaleString(),
-      uploadedBy: "Local Validation Engine",
-      totalRecords: dataRows.length,
-      validRecords,
-      manualReview: duplicates,
-      duplicates,
-      invalidRecords,
-      status,
-      readyForAssignment,
-    },
-    issues,
+    batchReference: sharedBatch.reference,
+    uploadDate: sharedBatch.uploadDate,
+    uploadedBy: sharedBatch.uploadedByUserId,
+    totalRecords: sharedBatch.totalBeneficiaries,
+    validRecords,
+    manualReview,
+    duplicates,
+    invalidRecords,
+    status,
+    readyForAssignment,
   };
 }
 
@@ -205,7 +273,14 @@ function stringifyValue(value: string | number | Date | undefined): string {
   return String(value);
 }
 
-function sanitizeBatchReference(fileName: string): string {
-  const withoutExtension = fileName.replace(/\.xlsx$/i, "");
-  return withoutExtension || "Uploaded Batch";
+function createBatchReference(fileName: string): string {
+  return `DR-${fileName.replace(/\.xlsx$/i, "").replace(/[^A-Za-z0-9]+/g, "-").toUpperCase()}`;
+}
+
+function createBatchId(): string {
+  return `shared-batch-${crypto.randomUUID()}`;
+}
+
+function createBeneficiaryId(index: number): string {
+  return `beneficiary-${index + 1}-${crypto.randomUUID()}`;
 }

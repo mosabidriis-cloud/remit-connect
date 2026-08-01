@@ -8,6 +8,7 @@ import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
 import { validateExcelUpload } from "../services/excelValidationService";
+import type { SharedBatch } from "../types/sharedBatch";
 
 export function SharedBatchUploadPage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -15,6 +16,7 @@ export function SharedBatchUploadPage() {
   const [isValidationComplete, setIsValidationComplete] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [sharedBatch, setSharedBatch] = useState<SharedBatch | null>(null);
   const [validationSummary, setValidationSummary] = useState<{
     batchReference: string;
     uploadDate: string;
@@ -36,6 +38,7 @@ export function SharedBatchUploadPage() {
     setValidationError(null);
     setValidationIssues([]);
     setValidationSummary(null);
+    setSharedBatch(null);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
@@ -44,6 +47,7 @@ export function SharedBatchUploadPage() {
       const result = await validateExcelUpload(file);
       setValidationSummary(result.summary);
       setValidationIssues(result.issues);
+      setSharedBatch(result.sharedBatch);
       setProgress(100);
       setIsUploading(false);
       setIsValidationComplete(true);
@@ -80,15 +84,15 @@ export function SharedBatchUploadPage() {
           {validationError}
         </div>
       ) : null}
-      {validationSummary ? (
+      {validationSummary && sharedBatch ? (
         <>
           <ValidationSummary summary={validationSummary} />
           <ValidationErrors issues={validationIssues} />
           <BatchSummary
             summary={{
-              batchReference: validationSummary.batchReference,
-              fileName: selectedFileName ?? "direct-remit-batch.xlsx",
-              totalRecords: validationSummary.totalRecords,
+              batchReference: sharedBatch.reference,
+              fileName: sharedBatch.fileName,
+              totalRecords: sharedBatch.totalBeneficiaries,
               validRecords: validationSummary.validRecords,
               status: validationSummary.status,
               readyForAssignment: validationSummary.readyForAssignment,
