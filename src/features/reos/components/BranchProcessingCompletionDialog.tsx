@@ -49,7 +49,7 @@ export function BranchProcessingCompletionDialog({
       >
         <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Finalize Processing</div>
         <p style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>
-          Confirm all transactions have been processed before marking this branch ready for proof.
+          Confirm all transactions have been processed before marking this branch as completed.
         </p>
 
         <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.md }}>

@@ -1,25 +1,22 @@
 # REOS AI Roadmap
 
+## Authority
+
+CURRENT_SPRINT.md is the single source of truth for active sprint scope. This document tracks sprint sequencing only.
+
 ## Completed
 
-- Sprint 1 Foundation
-- Sprint 2 Domain Models
-- Sprint 3 User Management
-- Sprint 4 Shared Batch
-- Sprint 5 Branch Assignment
-- Sprint 6 Credit-to-Account Processing
-- Sprint 7 Proof Download
-- Sprint 8 Operations Dashboard
+- Sprint 10 Enterprise UI
+- Sprint 11 Shared Batch Upload
+- Sprint 12 Branch Assignment
 
 ## Active
 
-- Sprint 9 Reporting Module
+- Sprint 13 Branch Processing - in progress, completed through the current milestone. See CURRENT_SPRINT.md for current milestone detail.
 
 ## Upcoming
 
-- Sprint 10 Audit
-- Sprint 11 Administration
-- Sprint 12 Production Readiness
+- Not yet defined. To be documented in CURRENT_SPRINT.md when scoped.
 
 ## Future
 

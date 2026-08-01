@@ -1,3 +1,4 @@
+import { colors, radius, spacing, typography } from "../theme";
 import type { ProofOfPayment } from "../types/proofOfPayment";
 
 type ProofGalleryProps = {
@@ -7,21 +8,43 @@ type ProofGalleryProps = {
 export function ProofGallery({ proofs }: ProofGalleryProps) {
   if (proofs.length === 0) {
     return (
-      <div className="rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">
+      <div
+        style={{
+          backgroundColor: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.sm,
+          color: colors.muted,
+          fontSize: typography.small,
+          padding: spacing.lg,
+        }}
+      >
         No proof-of-payment screenshots uploaded.
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 rounded border border-slate-200 bg-white p-4">
-      <h2 className="text-base font-semibold text-slate-950">Proof Gallery</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        display: "grid",
+        gap: spacing.md,
+        padding: spacing.lg,
+      }}
+    >
+      <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Proof Gallery</h2>
+      <div style={{ display: "grid", gap: spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
         {proofs.map((proof) => (
-          <figure className="rounded border border-slate-200 p-2" key={proof.id}>
-            <img alt={proof.fileName} className="aspect-video w-full rounded object-cover" src={proof.previewUrl} />
-            <figcaption className="mt-2 text-xs text-slate-600">
-              <span className="block font-medium text-slate-800">{proof.fileName}</span>
+          <figure key={proof.id} style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: spacing.sm }}>
+            <img
+              alt={proof.fileName}
+              src={proof.previewUrl}
+              style={{ aspectRatio: "16 / 9", borderRadius: radius.sm, objectFit: "cover", width: "100%" }}
+            />
+            <figcaption style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.sm }}>
+              <span style={{ color: colors.text, display: "block", fontWeight: 600 }}>{proof.fileName}</span>
               <span>Expires {proof.expiresAt}</span>
             </figcaption>
           </figure>

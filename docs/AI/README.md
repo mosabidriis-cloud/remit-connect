@@ -1,56 +1,48 @@
 # REOS AI Entry Point
 
-README.md is the single entry point for the REOS AI documentation framework.
+CLAUDE.md is the primary entry point for AI agents working in this repository.
 
-Before making any code changes, read these canonical documents in order:
+CURRENT_SPRINT.md is the single source of truth for active sprint scope.
 
-1. README.md
-2. BUSINESS_RULES.md
-3. LIFECYCLE.md
-4. CURRENT_SPRINT.md
-5. ROADMAP.md
-6. REOS_ARCHITECTURE.md
-7. REPORTING_STANDARDS.md
-8. IMPLEMENTATION_WORKFLOW.md
-9. DEVELOPMENT_STANDARDS.md
-10. DEFINITION_OF_DONE.md
-11. DECISIONS.md
-12. CHANGELOG.md
+README.md is the documentation index for the REOS AI documentation framework.
 
 ## Documentation Map
+
+### Entry Point
+
+- CLAUDE.md - required reading order and operating rules for AI agents.
+
+### Authoritative Sprint Scope
+
+- CURRENT_SPRINT.md - single source of truth for active sprint, module, milestone, allowed directories, and acceptance criteria.
+- PROJECT_STATE.md - fast-glance operational snapshot (branch, sprint, module, milestone, tag, build status).
 
 ### Business and Workflow
 
 - BUSINESS_RULES.md - frozen business rules and approved business flow.
 - LIFECYCLE.md - canonical Shared Batch lifecycle states and allowed transitions.
-- CURRENT_SPRINT.md - active sprint scope, permissions, acceptance criteria, and sprint boundaries.
-- ROADMAP.md - completed, active, upcoming, and future sprint sequencing.
+- ROADMAP.md - completed, active, and upcoming sprint sequencing.
+- MODULE_STATUS.md - status, sprint, completion, and notes for every REOS module.
 - REPORTING_STANDARDS.md - canonical report categories, layout, filters, exports, table behavior, and reporting data-source rules.
+- UI_GUIDELINES.md - canonical UI, component, and report layout conventions.
 
 ### Architecture and Engineering
 
-- REOS_ARCHITECTURE.md - REOS module boundaries, ownership boundaries, and persistence boundary.
-- IMPLEMENTATION_WORKFLOW.md - required implementation process and reporting expectations.
-- DEVELOPMENT_STANDARDS.md - engineering standards, technology stack, and coding rules.
+- ARCHITECTURE.md - REOS module boundaries, ownership boundaries, and persistence boundary.
+- WORKFLOW.md - required implementation process and reporting expectations.
+- CODING_RULES.md - engineering standards and technology stack.
 - DEFINITION_OF_DONE.md - completion checklist aligned with the implementation workflow.
+- TECH_DEBT.md - known technical debt (architecture, UI, performance, testing, persistence, security, refactoring).
 
 ### Governance
 
-- DECISIONS.md - decision log template.
+- DECISIONS.md - architectural decision log.
 - CHANGELOG.md - completed framework and sprint milestones only.
+- ARCHITECT_REVIEW_CHECKLIST.md - mandatory post-implementation architecture review.
+- AI_IMPLEMENTATION_TEMPLATE.md - implementation prompt and report template.
 
-These documents together define:
+## Precedence
 
-- Project scope
-- Frozen business rules
-- Canonical lifecycle
-- Current sprint objective
-- System architecture
-- Implementation standards
-- Delivery and review expectations
+Where documents in this framework conflict: CURRENT_SPRINT.md governs active sprint scope, and CLAUDE.md governs AI agent process. PROJECT_STATE.md and MODULE_STATUS.md are snapshots, not authorities. If any other conflict is found, report it as a blocker rather than resolving it by assumption.
 
-Do not proceed until all canonical documents have been read.
-
-CURRENT_SPRINT.md is the authoritative definition for the active module.
-
-If any business rule is missing or conflicts with the requested implementation, stop and report the blocker instead of making assumptions.
+Do not proceed until CLAUDE.md and CURRENT_SPRINT.md have been read.

@@ -41,7 +41,7 @@ Result:
 
 Verify implementation against:
 
-- REOS_ARCHITECTURE.md
+- ARCHITECTURE.md
 
 Questions:
 
@@ -77,6 +77,10 @@ Result:
 
 # 5. UI Review
 
+Verify implementation against:
+
+- UI_GUIDELINES.md
+
 Questions:
 
 - Does every screen answer a business question?
@@ -111,8 +115,12 @@ Result:
 Questions:
 
 - CURRENT_SPRINT.md updated?
+- PROJECT_STATE.md updated?
+- MODULE_STATUS.md updated?
 - CHANGELOG.md updated?
 - ROADMAP.md updated (if applicable)?
+- TECH_DEBT.md updated (if applicable)?
+- DECISIONS.md updated (if a new architectural decision was made)?
 - Documentation synchronized?
 
 Result:

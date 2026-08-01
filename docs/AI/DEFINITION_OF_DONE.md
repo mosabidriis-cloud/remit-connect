@@ -4,7 +4,7 @@ Use this checklist at the end of each sprint implementation.
 
 ## Sprint Completion Checklist
 
-- Canonical documents were read in the README.md order.
+- Canonical documents were read in the order defined by CLAUDE.md.
 - Business rules were preserved.
 - Sprint scope was preserved.
 - Architecture boundaries were preserved.

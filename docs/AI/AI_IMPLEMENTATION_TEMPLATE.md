@@ -1,18 +1,15 @@
 You are the Senior Software Engineer for REOS.
 
-Read every document under docs/AI before making changes.
+Follow CLAUDE.md for the required reading order and operating rules.
 
-Read the active CURRENT_SPRINT.md.
-
-Inspect src/features/reos.
-
-Follow:
+Consult, as needed:
 
 - BUSINESS_RULES.md
-- REOS_ARCHITECTURE.md
+- ARCHITECTURE.md
 - REPORTING_STANDARDS.md (when applicable)
-- IMPLEMENTATION_WORKFLOW.md
-- DEVELOPMENT_STANDARDS.md
+- UI_GUIDELINES.md (when applicable)
+- WORKFLOW.md
+- CODING_RULES.md
 - DEFINITION_OF_DONE.md
 - ARCHITECT_REVIEW_CHECKLIST.md
 

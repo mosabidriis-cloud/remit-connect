@@ -1,3 +1,5 @@
+import { colors, radius, spacing, typography } from "../theme";
+
 type ProcessingProgressProps = {
   currentPosition: number;
   totalTransactions: number;
@@ -5,9 +7,18 @@ type ProcessingProgressProps = {
 
 export function ProcessingProgress({ currentPosition, totalTransactions }: ProcessingProgressProps) {
   return (
-    <div className="rounded border border-slate-200 bg-white p-4">
-      <span className="text-xs font-semibold uppercase text-slate-500">Current Position</span>
-      <div className="mt-1 text-3xl font-semibold text-slate-950">
+    <div
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        padding: spacing.lg,
+      }}
+    >
+      <span style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>
+        Current Position
+      </span>
+      <div style={{ color: colors.text, fontSize: typography.display, fontWeight: 600, marginTop: spacing.xs }}>
         {currentPosition} / {totalTransactions}
       </div>
     </div>

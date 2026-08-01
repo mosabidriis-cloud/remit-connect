@@ -1,22 +1,41 @@
-import type { CreditToAccountTransaction } from "../types/transactionProcessing";
+import { StatusBadge } from "./common/StatusBadge";
+import { colors, radius, spacing, typography } from "../theme";
+import type { CreditToAccountTransaction, CreditToAccountTransactionStatus } from "../types/transactionProcessing";
 
 type TransactionCardProps = {
   transaction: CreditToAccountTransaction;
+};
+
+const statusTone: Record<CreditToAccountTransactionStatus, "blue" | "emerald" | "red"> = {
+  PENDING: "blue",
+  COMPLETED: "emerald",
+  RETURNED: "red",
 };
 
 export function TransactionCard({ transaction }: TransactionCardProps) {
   const beneficiary = transaction.beneficiary;
 
   return (
-    <div className="grid gap-4 rounded border border-slate-200 bg-white p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        display: "grid",
+        gap: spacing.lg,
+        padding: spacing.xl,
+      }}
+    >
+      <div style={{ alignItems: "flex-start", display: "flex", flexWrap: "wrap", gap: spacing.sm, justifyContent: "space-between" }}>
         <div>
-          <span className="text-xs font-semibold uppercase text-slate-500">Direct Remit Reference</span>
-          <h1 className="text-2xl font-semibold text-slate-950">{beneficiary.directRemitReference}</h1>
+          <span style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>
+            Direct Remit Reference
+          </span>
+          <h1 style={{ color: colors.text, fontSize: typography.h1, fontWeight: 600 }}>{beneficiary.directRemitReference}</h1>
         </div>
-        <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{transaction.status}</span>
+        <StatusBadge label={transaction.status} tone={statusTone[transaction.status]} />
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div style={{ display: "grid", gap: spacing.lg, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
         <ReadOnlyField label="Beneficiary" value={beneficiary.beneficiaryName} />
         <ReadOnlyField label="Bank" value={beneficiary.bankName} />
         <ReadOnlyField label="Account Number" value={beneficiary.accountNumber} />
@@ -35,9 +54,9 @@ type ReadOnlyFieldProps = {
 
 function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
   return (
-    <div className="grid gap-1">
-      <span className="text-xs font-semibold uppercase text-slate-500">{label}</span>
-      <span className="text-sm font-medium text-slate-950">{value}</span>
+    <div style={{ display: "grid", gap: spacing.xs }}>
+      <span style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ color: colors.text, fontSize: typography.small, fontWeight: 500 }}>{value}</span>
     </div>
   );
 }

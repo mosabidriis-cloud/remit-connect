@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { colors, radius, spacing, typography } from "../theme";
 
 type ProofUploadProps = {
   onUpload: (files: File[]) => void;
@@ -15,9 +16,27 @@ export function ProofUpload({ onUpload }: ProofUploadProps) {
   };
 
   return (
-    <label className="grid gap-2 rounded border border-slate-200 bg-white p-4 text-sm font-medium text-slate-700">
+    <label
+      style={{
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.sm,
+        color: colors.text,
+        display: "grid",
+        fontSize: typography.small,
+        fontWeight: 500,
+        gap: spacing.sm,
+        padding: spacing.lg,
+      }}
+    >
       Upload Proof
-      <input accept="image/*" className="rounded border border-slate-300 px-3 py-2 text-sm" multiple onChange={handleChange} type="file" />
+      <input
+        accept="image/*"
+        multiple
+        onChange={handleChange}
+        style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, fontSize: typography.small, padding: `${spacing.sm}px ${spacing.md}px` }}
+        type="file"
+      />
     </label>
   );
 }

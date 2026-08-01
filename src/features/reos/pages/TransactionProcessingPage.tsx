@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { EmptyState } from "../components/common/EmptyState";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
+import { colors, radius, spacing, typography } from "../theme";
 import { ProcessingProgress } from "../components/ProcessingProgress";
 import { ProofGallery } from "../components/ProofGallery";
 import { ProofUpload } from "../components/ProofUpload";
@@ -47,9 +48,7 @@ export function TransactionProcessingPage() {
   const totalTransactions = state?.totalTransactions ?? 0;
   const branchOfficerUserId = state?.branchOfficerUserId ?? "BRANCH_OFFICER";
   const returnReasons = state?.returnReasons ?? getActiveReturnReasons();
-  const activeReturnReasons = returnReasons.filter((reason) => reason.isActive);
   const canComplete = Boolean(transaction && transaction.status === "PENDING" && transaction.proofs.length > 0);
-  const canReturn = Boolean(transaction && transaction.status === "PENDING" && activeReturnReasons.length > 0);
 
   const handleProofUpload = (files: File[]) => {
     if (!transaction) {
@@ -193,36 +192,37 @@ export function TransactionProcessingPage() {
       <TransactionCard transaction={transaction} />
       <ProofUpload onUpload={handleProofUpload} />
       <ProofGallery proofs={transaction.proofs} />
-      <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
+      <div style={{ borderTop: `1px solid ${colors.border}`, display: "flex", flexWrap: "wrap", gap: spacing.sm, justifyContent: "flex-end", paddingTop: spacing.lg }}>
         <button
-          className="rounded border border-red-300 px-4 py-2 text-sm font-medium text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!canReturn}
-          onClick={() => {
-            if (activeReturnReasons.length === 0) {
-              setMessage("At least one active return reason is required.");
-            }
-          }}
-          type="button"
-        >
-          Return Transaction
-        </button>
-        <button
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!canComplete}
           onClick={handleComplete}
+          style={{
+            backgroundColor: canComplete ? colors.primary : colors.slate200,
+            border: "none",
+            borderRadius: radius.sm,
+            color: canComplete ? colors.surface : colors.muted,
+            cursor: canComplete ? "pointer" : "not-allowed",
+            fontSize: typography.small,
+            fontWeight: 600,
+            padding: `${spacing.sm}px ${spacing.lg}px`,
+          }}
           type="button"
         >
           Complete Transaction
         </button>
       </div>
       <ReturnTransactionDialog returnReasons={returnReasons} onReturn={handleReturn} />
-      {message ? <div className="rounded border border-slate-200 bg-white p-4 text-sm text-slate-700">{message}</div> : null}
+      {message ? (
+        <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, color: colors.text, fontSize: typography.small, padding: spacing.lg }}>
+          {message}
+        </div>
+      ) : null}
       {audits.length > 0 ? (
-        <div className="rounded border border-slate-200 bg-white p-4">
-          <h2 className="text-base font-semibold text-slate-950">Audit</h2>
-          <ul className="mt-2 grid gap-2">
+        <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: spacing.lg }}>
+          <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Audit</h2>
+          <ul style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
             {audits.map((audit) => (
-              <li className="text-sm text-slate-700" key={audit.id}>
+              <li style={{ color: colors.muted, fontSize: typography.small }} key={audit.id}>
                 {audit.performedAt}: {audit.details}
               </li>
             ))}
