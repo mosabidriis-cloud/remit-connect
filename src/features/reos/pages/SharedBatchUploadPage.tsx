@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BatchSummary } from "../components/BatchSummary";
 import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
 import { PageContainer } from "../components/common/PageContainer";
@@ -7,24 +7,7 @@ import { UploadProgress } from "../components/UploadProgress";
 import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
-
-const mockedSummary = {
-  batchReference: "DRB-2026-0148",
-  uploadDate: "2026-08-01 10:15",
-  uploadedBy: "Direct Remit Officer",
-  totalRecords: 248,
-  validRecords: 232,
-  manualReview: 7,
-  duplicates: 3,
-  invalidRecords: 6,
-  status: "Ready for Review",
-  readyForAssignment: true,
-};
-
-const mockedIssues = [
-  { id: "1", field: "Beneficiary Name", message: "Missing value for one record in the draft file.", severity: "WARNING" as const },
-  { id: "2", field: "Account Number", message: "Two entries appear to be malformed and need review.", severity: "ERROR" as const },
-];
+import { validateExcelUpload } from "../services/excelValidationService";
 
 export function SharedBatchUploadPage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -32,34 +15,44 @@ export function SharedBatchUploadPage() {
   const [isValidationComplete, setIsValidationComplete] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [validationSummary, setValidationSummary] = useState<{
+    batchReference: string;
+    uploadDate: string;
+    uploadedBy: string;
+    totalRecords: number;
+    validRecords: number;
+    manualReview: number;
+    duplicates: number;
+    invalidRecords: number;
+    status: string;
+    readyForAssignment: boolean;
+  } | null>(null);
+  const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isUploading) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setProgress((current) => {
-        if (current >= 100) {
-          window.clearInterval(timer);
-          setIsUploading(false);
-          setIsValidationComplete(true);
-          return 100;
-        }
-
-        return current + 20;
-      });
-    }, 220);
-
-    return () => window.clearInterval(timer);
-  }, [isUploading]);
-
-  const handleUpload = (file: File) => {
+  const handleUpload = async (file: File) => {
     setSelectedFileName(file.name);
     setProgress(0);
+    setValidationError(null);
+    setValidationIssues([]);
+    setValidationSummary(null);
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
+
+    try {
+      const result = await validateExcelUpload(file);
+      setValidationSummary(result.summary);
+      setValidationIssues(result.issues);
+      setProgress(100);
+      setIsUploading(false);
+      setIsValidationComplete(true);
+    } catch (error) {
+      setProgress(0);
+      setIsUploading(false);
+      setIsValidationComplete(false);
+      setValidationError(error instanceof Error ? error.message : "The workbook could not be validated.");
+    }
   };
 
   const stage = useMemo(() => {
@@ -82,25 +75,30 @@ export function SharedBatchUploadPage() {
       />
       <UploadZone isUploading={isUploading} onFileSelected={handleUpload} selectedFileName={selectedFileName} />
       <UploadProgress progress={progress} stage={stage} />
-      {isValidationComplete ? (
+      {validationError ? (
+        <div style={{ backgroundColor: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 8, color: "#B91C1C", padding: 16 }}>
+          {validationError}
+        </div>
+      ) : null}
+      {validationSummary ? (
         <>
-          <ValidationSummary summary={mockedSummary} />
-          <ValidationErrors issues={mockedIssues} />
+          <ValidationSummary summary={validationSummary} />
+          <ValidationErrors issues={validationIssues} />
           <BatchSummary
             summary={{
-              batchReference: mockedSummary.batchReference,
-              fileName: selectedFileName ?? "direct-remit-batch.csv",
-              totalRecords: mockedSummary.totalRecords,
-              validRecords: mockedSummary.validRecords,
-              status: mockedSummary.status,
-              readyForAssignment: mockedSummary.readyForAssignment,
+              batchReference: validationSummary.batchReference,
+              fileName: selectedFileName ?? "direct-remit-batch.xlsx",
+              totalRecords: validationSummary.totalRecords,
+              validRecords: validationSummary.validRecords,
+              status: validationSummary.status,
+              readyForAssignment: validationSummary.readyForAssignment,
             }}
           />
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={() => setShowConfirmDialog(true)}
               style={{
-                backgroundColor: mockedSummary.readyForAssignment ? "#2563EB" : "#F59E0B",
+                backgroundColor: validationSummary.readyForAssignment ? "#2563EB" : "#F59E0B",
                 border: "none",
                 borderRadius: 4,
                 color: "#FFFFFF",
@@ -121,7 +119,7 @@ export function SharedBatchUploadPage() {
           setIsValidationComplete(true);
         }}
         open={showConfirmDialog}
-        summary={{ batchReference: mockedSummary.batchReference, fileName: selectedFileName ?? "direct-remit-batch.csv", readyForAssignment: mockedSummary.readyForAssignment }}
+        summary={{ batchReference: validationSummary?.batchReference ?? "Uploaded Batch", fileName: selectedFileName ?? "direct-remit-batch.xlsx", readyForAssignment: validationSummary?.readyForAssignment ?? false }}
       />
     </PageContainer>
   );

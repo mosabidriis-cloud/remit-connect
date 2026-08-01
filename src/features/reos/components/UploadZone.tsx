@@ -44,10 +44,10 @@ export function UploadZone({ isUploading, onFileSelected, selectedFileName }: Up
         textAlign: "center",
       }}
     >
-      <input accept=".csv,text/csv" hidden onChange={handleInputChange} ref={inputRef} type="file" />
+      <input accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onChange={handleInputChange} ref={inputRef} type="file" />
       <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Upload Direct Remit Batch</div>
       <p style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>
-        Drag and drop a CSV file or select it from your device to begin the mocked validation workflow.
+        Drag and drop an .xlsx workbook or select it from your device to begin the Excel validation workflow.
       </p>
       <button
         onClick={() => inputRef.current?.click()}
