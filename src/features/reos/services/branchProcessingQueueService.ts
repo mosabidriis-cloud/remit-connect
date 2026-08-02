@@ -34,22 +34,41 @@ const branchProcessingQueueState: BranchProcessingQueueItem[] = [];
 const branchProcessingStatusState = new Map<string, BranchProcessingStatus>();
 
 export function hydrateBranchProcessingQueue(branchId: string, assignments: Assignment[]) {
+  // Re-hydration must be idempotent: mounting this branch's queue again (e.g. the
+  // officer navigates away and back) must not discard progress already made. Existing
+  // items are preserved as-is; only assignment-beneficiary pairs not yet in the queue
+  // get a fresh ASSIGNED item. Branch-level status (PROCESSING/COMPLETED) is left
+  // untouched here for the same reason - see finalizeBranchProcessing for its only writer.
+  const existingItemsById = new Map(
+    branchProcessingQueueState
+      .filter((item) => item.branchId === branchId)
+      .map((item) => [item.id, item] as const),
+  );
+
   const nextItems = assignments.flatMap((assignment) =>
-    (assignment.assignedTransactions ?? []).map((beneficiary) => ({
-      id: `${assignment.id}-${beneficiary.id}`,
-      assignmentId: assignment.id,
-      branchId,
-      beneficiary,
-      status: "ASSIGNED" as BranchProcessingQueueStatus,
-      proofs: [] as ProofOfPayment[],
-      returnReason: null as ReturnReason | null,
-      returnComment: null as string | null,
-    })),
+    (assignment.assignedTransactions ?? []).map((beneficiary) => {
+      const id = `${assignment.id}-${beneficiary.id}`;
+      const existingItem = existingItemsById.get(id);
+
+      if (existingItem) {
+        return existingItem;
+      }
+
+      return {
+        id,
+        assignmentId: assignment.id,
+        branchId,
+        beneficiary,
+        status: "ASSIGNED" as BranchProcessingQueueStatus,
+        proofs: [] as ProofOfPayment[],
+        returnReason: null as ReturnReason | null,
+        returnComment: null as string | null,
+      };
+    }),
   );
 
   const otherBranchItems = branchProcessingQueueState.filter((item) => item.branchId !== branchId);
   branchProcessingQueueState.splice(0, branchProcessingQueueState.length, ...otherBranchItems, ...nextItems);
-  branchProcessingStatusState.delete(branchId);
 
   // A branch accepting its assigned transactions into the processing queue is the
   // point at which the underlying Shared Batch is accepted into workflow (LIFECYCLE.md

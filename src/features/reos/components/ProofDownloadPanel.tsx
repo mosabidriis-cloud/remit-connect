@@ -1,3 +1,6 @@
+import { DataTable, type DataTableColumn } from "./common/DataTable";
+import { EmptyState } from "./common/EmptyState";
+import { colors, spacing, typography } from "../theme";
 import type { DownloadableProof } from "../types/proofDownload";
 
 type ProofDownloadPanelProps = {
@@ -7,49 +10,45 @@ type ProofDownloadPanelProps = {
 };
 
 export function ProofDownloadPanel({ actorCanDownload, proofs, onDownloadProof }: ProofDownloadPanelProps) {
+  const columns: DataTableColumn<DownloadableProof>[] = [
+    { key: "reference", header: "Direct Remit Reference", render: (item) => item.directRemitReference },
+    { key: "fileName", header: "Proof Image", render: (item) => item.proof.fileName },
+    { key: "uploadedAt", header: "Uploaded Time", render: (item) => formatDateTime(item.proof.uploadedAt) },
+    { key: "status", header: "Status", render: (item) => item.proof.status },
+    {
+      key: "action",
+      header: "Action",
+      align: "right",
+      render: (item) => (
+        <button
+          disabled={!actorCanDownload}
+          onClick={() => onDownloadProof(item)}
+          style={{
+            background: "none",
+            border: "none",
+            color: actorCanDownload ? colors.primary : colors.muted,
+            cursor: actorCanDownload ? "pointer" : "not-allowed",
+            fontSize: typography.small,
+            fontWeight: 600,
+            padding: 0,
+          }}
+          type="button"
+        >
+          Download Individual Proof
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <section className="rounded border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <h2 className="text-base font-semibold text-slate-950">Individual Proof Images</h2>
-      </div>
+    <div style={{ display: "grid", gap: spacing.sm }}>
+      <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Individual Proof Images</h2>
       {proofs.length === 0 ? (
-        <p className="p-4 text-sm text-slate-600">No proof images are available for download.</p>
+        <EmptyState message="No proof images are available for download." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
-              <tr>
-                <th className="px-4 py-3">Direct Remit Reference</th>
-                <th className="px-4 py-3">Proof Image</th>
-                <th className="px-4 py-3">Uploaded Time</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {proofs.map((proofItem) => (
-                <tr key={proofItem.proof.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{proofItem.directRemitReference}</td>
-                  <td className="px-4 py-3 text-slate-700">{proofItem.proof.fileName}</td>
-                  <td className="px-4 py-3 text-slate-700">{formatDateTime(proofItem.proof.uploadedAt)}</td>
-                  <td className="px-4 py-3 text-slate-700">{proofItem.proof.status}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      className="text-sm font-medium text-blue-700 disabled:cursor-not-allowed disabled:text-slate-400"
-                      disabled={!actorCanDownload}
-                      onClick={() => onDownloadProof(proofItem)}
-                      type="button"
-                    >
-                      Download Individual Proof
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable columns={columns} getRowKey={(item) => item.proof.id} rows={proofs} />
       )}
-    </section>
+    </div>
   );
 }
 

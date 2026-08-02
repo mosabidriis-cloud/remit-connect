@@ -28,7 +28,7 @@ export interface BatchDownloadSummary {
   completedTransactionCount: number;
   returnedTransactionCount: number;
   processingStatus: SharedBatchLifecycleStatus;
-  downloadStatus: Extract<SharedBatchLifecycleStatus, "READY_FOR_DOWNLOAD" | "DOWNLOADED">;
+  downloadStatus: SharedBatchLifecycleStatus;
   completedByUserId: string | null;
   completedAt: string | null;
   downloadedByUserId: string | null;

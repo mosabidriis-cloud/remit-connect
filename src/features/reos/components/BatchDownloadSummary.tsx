@@ -1,4 +1,5 @@
 import { BatchLifecycleBadge } from "./BatchLifecycleBadge";
+import { colors, radius, spacing, typography } from "../theme";
 import type { BatchDownloadSummary as BatchDownloadSummaryModel } from "../types/proofDownload";
 
 type BatchDownloadSummaryProps = {
@@ -25,19 +26,19 @@ export function BatchDownloadSummary({ summary }: BatchDownloadSummaryProps) {
   ] as const;
 
   return (
-    <section className="rounded border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <h2 className="text-base font-semibold text-slate-950">Batch Download Summary</h2>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md }}>
+      <div style={{ borderBottom: `1px solid ${colors.border}`, padding: `${spacing.md}px ${spacing.lg}px` }}>
+        <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Batch Download Summary</h2>
       </div>
-      <dl className="grid gap-0 sm:grid-cols-2">
+      <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         {rows.map(([label, value]) => (
-          <div className="border-b border-slate-100 px-4 py-3 last:border-b-0 sm:last:border-b" key={label}>
-            <dt className="text-xs font-semibold uppercase text-slate-500">{label}</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-900">{value}</dd>
+          <div key={label as string} style={{ borderTop: `1px solid ${colors.slate100}`, padding: `${spacing.md}px ${spacing.lg}px` }}>
+            <dt style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>{label}</dt>
+            <dd style={{ color: colors.text, fontSize: typography.small, fontWeight: 500, marginTop: spacing.xs }}>{value}</dd>
           </div>
         ))}
       </dl>
-    </section>
+    </div>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { colors, radius, spacing, typography } from "../theme";
 import type { SharedBatchLifecycleStatus } from "../types/sharedBatch";
 
 type BatchDownloadActionsProps = {
@@ -20,27 +21,46 @@ export function BatchDownloadActions({
 }: BatchDownloadActionsProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const canDownload = actorCanDownload && proofImageCount > 0 && lifecycleStatus === "READY_FOR_DOWNLOAD";
+  const canConfirmDownloaded = actorCanDownload && lifecycleStatus === "READY_FOR_DOWNLOAD";
 
   return (
-    <section className="rounded border border-slate-200 bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}>
+      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: spacing.sm, justifyContent: "space-between" }}>
         <div>
-          <h2 className="text-base font-semibold text-slate-950">Proof Downloads</h2>
-          <p className="text-sm text-slate-600">{proofImageCount} proof image(s) available.</p>
+          <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Proof Downloads</h2>
+          <p style={{ color: colors.muted, fontSize: typography.small }}>{proofImageCount} proof image(s) available.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.sm }}>
           <button
-            className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!canDownload || isDownloadingZip}
             onClick={onDownloadZip}
+            style={{
+              backgroundColor: canDownload && !isDownloadingZip ? colors.primary : colors.slate200,
+              border: "none",
+              borderRadius: radius.sm,
+              color: canDownload && !isDownloadingZip ? colors.surface : colors.muted,
+              cursor: canDownload && !isDownloadingZip ? "pointer" : "not-allowed",
+              fontSize: typography.small,
+              fontWeight: 600,
+              padding: `${spacing.sm}px ${spacing.lg}px`,
+            }}
             type="button"
           >
             {isDownloadingZip ? "Preparing ZIP" : "Download ZIP"}
           </button>
           <button
-            className="rounded border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={!actorCanDownload || lifecycleStatus !== "READY_FOR_DOWNLOAD"}
+            disabled={!canConfirmDownloaded}
             onClick={() => setIsConfirming(true)}
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${canConfirmDownloaded ? colors.success : colors.border}`,
+              borderRadius: radius.sm,
+              color: canConfirmDownloaded ? colors.success : colors.muted,
+              cursor: canConfirmDownloaded ? "pointer" : "not-allowed",
+              fontSize: typography.small,
+              fontWeight: 600,
+              padding: `${spacing.sm}px ${spacing.lg}px`,
+            }}
             type="button"
           >
             Confirm
@@ -48,23 +68,49 @@ export function BatchDownloadActions({
         </div>
       </div>
       {isConfirming ? (
-        <div className="mt-4 rounded border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-950">
+        <div
+          style={{
+            backgroundColor: colors.amber50,
+            border: `1px solid ${colors.amber700}`,
+            borderRadius: radius.sm,
+            marginTop: spacing.lg,
+            padding: spacing.lg,
+          }}
+        >
+          <p style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>
             This action completes the REOS operational workflow for this batch.
           </p>
-          <div className="mt-3 flex flex-wrap gap-3">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.md }}>
             <button
-              className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700"
               onClick={() => setIsConfirming(false)}
+              style={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radius.sm,
+                color: colors.text,
+                cursor: "pointer",
+                fontSize: typography.small,
+                fontWeight: 600,
+                padding: `${spacing.sm}px ${spacing.lg}px`,
+              }}
               type="button"
             >
               Cancel
             </button>
             <button
-              className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white"
               onClick={() => {
                 setIsConfirming(false);
                 onConfirmDownloaded();
+              }}
+              style={{
+                backgroundColor: colors.success,
+                border: "none",
+                borderRadius: radius.sm,
+                color: colors.surface,
+                cursor: "pointer",
+                fontSize: typography.small,
+                fontWeight: 600,
+                padding: `${spacing.sm}px ${spacing.lg}px`,
               }}
               type="button"
             >
@@ -73,6 +119,6 @@ export function BatchDownloadActions({
           </div>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { AssignmentSummary } from "../components/AssignmentSummary";
 import { BatchSummary } from "../components/BatchSummary";
 import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
+import {
+  BranchProcessingNavigation,
+  type BranchProcessingNavigationTarget,
+} from "../components/BranchProcessingNavigation";
 import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
@@ -105,6 +109,20 @@ export function SharedBatchUploadPage() {
     : null;
 
   const canConfirm = Boolean(validationSummary && validationSummary.validRecords > 0);
+
+  // Assignment gives us a real branch id/name directly - no store lookup needed.
+  // Dedupes in case the same branch received more than one assignment group.
+  const branchProcessingTargets = useMemo<BranchProcessingNavigationTarget[]>(() => {
+    const targetsByBranch = new Map<string, string>();
+
+    assignments.forEach((entry) => {
+      if (entry.assignedBranchId) {
+        targetsByBranch.set(entry.assignedBranchId, entry.assignedBranchName ?? entry.assignedBranchId);
+      }
+    });
+
+    return Array.from(targetsByBranch.entries()).map(([branchId, branchName]) => ({ branchId, branchName }));
+  }, [assignments]);
 
   return (
     <PageContainer>
@@ -216,6 +234,11 @@ export function SharedBatchUploadPage() {
                   manualReviewCount={assignableBeneficiaries.filter((beneficiary) => beneficiary.processingStatusId === "MANUAL_REVIEW").length}
                   sharedBatch={sharedBatch}
                 />
+              ) : null}
+              {isAssignmentFinalized ? (
+                <div style={{ marginTop: spacing.lg }}>
+                  <BranchProcessingNavigation targets={branchProcessingTargets} />
+                </div>
               ) : null}
             </div>
           ) : null}

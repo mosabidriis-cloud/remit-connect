@@ -102,7 +102,7 @@ export function getBatchDownloadSummary(batch: ProofDownloadBatch): BatchDownloa
     completedTransactionCount: batch.transactions.filter((transaction) => transaction.status === "COMPLETED").length,
     returnedTransactionCount: batch.transactions.filter((transaction) => transaction.status === "RETURNED").length,
     processingStatus: batch.lifecycleStatus,
-    downloadStatus: batch.lifecycleStatus === "DOWNLOADED" ? "DOWNLOADED" : "READY_FOR_DOWNLOAD",
+    downloadStatus: batch.lifecycleStatus,
     completedByUserId: batch.completedByUserId,
     completedAt: batch.completedAt,
     downloadedByUserId: batch.downloadedByUserId,

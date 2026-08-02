@@ -1,3 +1,4 @@
+import { colors, radius, spacing, typography } from "../theme";
 import type { ProofDownloadHistoryEntry } from "../types/proofDownload";
 
 type DownloadHistoryProps = {
@@ -6,23 +7,25 @@ type DownloadHistoryProps = {
 
 export function DownloadHistory({ history }: DownloadHistoryProps) {
   return (
-    <section className="rounded border border-slate-200 bg-white p-4">
-      <h2 className="text-base font-semibold text-slate-950">Download History</h2>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}>
+      <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Download History</h2>
       {history.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-600">No proof download activity recorded for this session.</p>
+        <p style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>
+          No proof download activity recorded for this session.
+        </p>
       ) : (
-        <ul className="mt-3 grid gap-2">
+        <ul style={{ display: "grid", gap: spacing.sm, marginTop: spacing.md }}>
           {history.map((entry) => (
-            <li className="rounded border border-slate-100 p-3 text-sm text-slate-700" key={entry.id}>
-              <div className="font-medium text-slate-900">{entry.details}</div>
-              <div className="mt-1 text-xs text-slate-500">
+            <li key={entry.id} style={{ border: `1px solid ${colors.slate100}`, borderRadius: radius.sm, padding: spacing.md }}>
+              <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{entry.details}</div>
+              <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
                 {entry.performedByUserId} at {formatDateTime(entry.performedAt)}
               </div>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </div>
   );
 }
 
