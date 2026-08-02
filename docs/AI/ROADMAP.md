@@ -15,11 +15,13 @@ CURRENT_SPRINT.md is the single source of truth for active sprint scope. This do
 
 ## Active
 
-- None. Sprint 15 is the most recently completed sprint; Sprint 16 is not yet scoped.
+- Sprint 16 Reporting Architecture - **architecture only, scope proposed 2026-08-02 and awaiting business owner approval** (DECISIONS.md DEC-005). Two design-only deliverables: REPORTING_ARCHITECTURE.md (following the PROOF_MANAGEMENT.md precedent from Sprint 14) and REPORTING_PROJECTION_LAYER.md (the read-only boundary between operational state and reporting). No application source code written or modified. Implementation (M4) is blocked on nine open business decisions (D-1 through D-9). Headline finding: Reporting and the Operations Dashboard have no data source - both pages read from React Router `location.state` and nothing navigates to them with state, so both render permanently empty for a real user. See CURRENT_SPRINT.md.
 
 ## Upcoming
 
-- Sprint 16 - not yet scoped. Candidates, per TECH_DEBT.md: `BranchAssignmentPage.tsx`'s inability to select a real uploaded batch; Branch Processing's missing actor-role gating; the orphaned `proofOfPaymentService.markProofDownloaded`; proof expiry not enforced against `expiresAt`; the Sidebar's remaining placeholder links (Proof Download, Transaction Processing, User Details/Edit); Reporting's missing Performance Reports category and disabled export actions; a small React Hooks lint cleanup (`set-state-in-render`/`set-state-in-effect`) surfaced during Sprint 15 Stabilization & Closure.
+- **Sprint 17 (candidate) - Reporting Implementation.** Requires D-1 through D-9 resolved first. Natural first milestone: the read-only reporting projection layer, now fully designed in REPORTING_PROJECTION_LAYER.md - it alone closes the "no data source" defect for both Reporting and the existing dashboard, and it requires only Decision D-4 (two additive read-only accessors) to become buildable.
+- **Audit trail** - prerequisite for the entire Audit report category, and a gap against BUSINESS_RULES.md's existing audit rules. Recommended as its own scoped work before any Audit report is built (Decision D-5).
+- Carried forward, per TECH_DEBT.md: `BranchAssignmentPage.tsx`'s inability to select a real uploaded batch; Branch Processing's missing actor-role gating and its missing processing timestamps/actor attribution (Decision D-6); the orphaned `proofOfPaymentService.markProofDownloaded`; proof expiry not enforced against `expiresAt`; the Sidebar's remaining placeholder links (Proof Download, Transaction Processing, User Details/Edit); removal of out-of-scope financial metrics from the Operations Dashboard (Decision D-9); a small React Hooks lint cleanup (`set-state-in-render`/`set-state-in-effect`) surfaced during Sprint 15 Stabilization & Closure.
 
 ## Future
 

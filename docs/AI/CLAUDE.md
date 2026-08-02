@@ -27,6 +27,8 @@ Only after reading these three, inspect implementation files.
 - WORKFLOW.md - implementation workflow and required reporting.
 - UI_GUIDELINES.md - UI, component, and report layout conventions.
 - PROOF_MANAGEMENT.md - canonical architecture and design reference for the Proof Management module (Sprint 14).
+- REPORTING_ARCHITECTURE.md - canonical architecture and design reference for the Reporting module and dashboards (Sprint 16).
+- REPORTING_PROJECTION_LAYER.md - canonical design for the Reporting Projection Layer, the read-only boundary between operational state and reporting (Sprint 16).
 - ROADMAP.md - sprint sequencing and completed work.
 - MODULE_STATUS.md - status of every REOS module.
 - TECH_DEBT.md - known technical debt.

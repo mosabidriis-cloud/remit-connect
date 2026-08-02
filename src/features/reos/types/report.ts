@@ -1,9 +1,3 @@
-import type { SharedBatch, SharedBatchLifecycleStatus } from "./sharedBatch";
-import type {
-  BranchProcessingBatch,
-  CreditToAccountTransaction,
-} from "./transactionProcessing";
-
 export type ReportCategory = "VOLUME" | "PERFORMANCE";
 
 export type ReportType =
@@ -60,33 +54,15 @@ export interface ReportResult<T> {
   generatedAt: string;
 }
 
-export interface SharedBatchReportRow {
-  batch: SharedBatch;
-}
-
-export interface TransactionReportRow {
-  transaction: CreditToAccountTransaction;
-}
-
-export interface BranchBatchReportRow {
-  batch: BranchProcessingBatch;
-}
-
-export interface ReportSourceData {
-  sharedBatches?: SharedBatch[];
-  processingBatches?: BranchProcessingBatch[];
-}
-
-export interface VolumeReportRow extends Record<string, unknown> {
-  id: string;
-  batchReference: string;
-  branchId: string | null;
-  transactionReference?: string;
-  beneficiaryName?: string;
-  status?: SharedBatchLifecycleStatus | CreditToAccountTransaction["status"];
-  transactionCount?: number;
-  completedCount?: number;
-  returnedCount?: number;
-  proofCount?: number;
-  date: string;
-}
+/**
+ * The row shape a report consumer sees. Every reporting projection model is flat and
+ * Record<string, unknown>-compatible, so one row type serves every report and ReportTable
+ * can sort and render generically without knowing which projection backs it.
+ *
+ * Sprint 16 M4.4 removed the previous row and source-data types (VolumeReportRow,
+ * SharedBatchReportRow, TransactionReportRow, BranchBatchReportRow, ReportSourceData).
+ * They existed only to describe data handed to ReportsPage through React Router
+ * location.state; reports now read live operational data through the projection layer,
+ * so nothing constructs or consumes those shapes any more.
+ */
+export type ReportRow = Record<string, unknown>;

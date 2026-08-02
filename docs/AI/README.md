@@ -26,6 +26,8 @@ README.md is the documentation index for the REOS AI documentation framework.
 - REPORTING_STANDARDS.md - canonical report categories, layout, filters, exports, table behavior, and reporting data-source rules.
 - UI_GUIDELINES.md - canonical UI, component, and report layout conventions.
 - PROOF_MANAGEMENT.md - canonical architecture and design reference for the Proof Management module (Sprint 14).
+- REPORTING_ARCHITECTURE.md - canonical architecture and design reference for the Reporting module and dashboards (Sprint 16). Subordinate to REPORTING_STANDARDS.md.
+- REPORTING_PROJECTION_LAYER.md - canonical design for the Reporting Projection Layer: projection models, the single projection service, data ownership, the dependency contract, and persistence future-compatibility (Sprint 16). Subordinate to REPORTING_ARCHITECTURE.md.
 
 ### Architecture and Engineering
 

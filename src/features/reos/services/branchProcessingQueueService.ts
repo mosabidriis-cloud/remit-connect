@@ -88,6 +88,40 @@ export function getBranchProcessingQueue(branchId: string): BranchProcessingQueu
   return branchProcessingQueueState.filter((item) => item.branchId === branchId);
 }
 
+/**
+ * Read-only enumeration of every branch's processing queue items (Sprint 16 M4.1,
+ * DECISIONS.md DEC-007 / REPORTING_PROJECTION_LAYER.md D-4).
+ *
+ * The enterprise-wide counterpart to getBranchProcessingQueue, which can only read
+ * one branch at a time and so cannot serve Operations Manager visibility.
+ *
+ * Guarantees, all of which this function depends on being kept:
+ * - It never calls hydrateBranchProcessingQueue. Reading a queue must never rebuild
+ *   one: hydration was found in Sprint 15 M1.75 to have silently discarded completed
+ *   work, and a read path must not be able to reach it even now that it is idempotent.
+ * - It writes nothing - no item status, no proof, no branch-level status.
+ * - It returns deep copies. Unlike getBranchProcessingQueue, which returns live item
+ *   references that Branch Processing relies on, nothing here is reachable back into
+ *   branchProcessingQueueState, so a reporting consumer cannot mutate processing state.
+ * - Ordering is internal array order and is not part of this contract - callers must
+ *   apply their own deterministic sort (REPORTING_PROJECTION_LAYER.md Section 9.5).
+ *
+ * Branch-level status is not enumerated here: branch ids are derivable from these
+ * items, and getBranchProcessingStatus already reads status per branch.
+ */
+export function getAllBranchProcessingQueueItems(): readonly BranchProcessingQueueItem[] {
+  return branchProcessingQueueState.map(copyBranchProcessingQueueItem);
+}
+
+function copyBranchProcessingQueueItem(item: BranchProcessingQueueItem): BranchProcessingQueueItem {
+  return {
+    ...item,
+    beneficiary: { ...item.beneficiary },
+    proofs: item.proofs.map((proof) => ({ ...proof })),
+    returnReason: item.returnReason ? { ...item.returnReason } : null,
+  };
+}
+
 export function canTransitionToStatus(currentStatus: BranchProcessingQueueStatus, nextStatus: BranchProcessingQueueStatus): boolean {
   if (currentStatus === "ASSIGNED") {
     return nextStatus === "IN_PROGRESS";
