@@ -1,9 +1,11 @@
+import { buildOperationsDashboard } from "./dashboardService";
 import {
   projectBatches,
   projectBranches,
   projectProcessing,
   projectProofs,
 } from "./reportingProjectionService";
+import type { OperationsDashboard, OperationsDashboardRole } from "../types/dashboard";
 import type {
   ReportDefinition,
   ReportFilter,
@@ -406,6 +408,44 @@ export class ReportService {
     ]);
   }
 
+  /**
+   * Builds the Operations Dashboard from the same projections the reports use
+   * (Sprint 16 M4.5).
+   *
+   * Exposed here so OperationsDashboardPage has exactly one service dependency and cannot
+   * reach an operational store, matching the rule already applied to ReportsPage. This
+   * service still owns no dashboard logic: it gathers the four projections through its own
+   * generate operations and hands them to dashboardService, which owns the view model.
+   * Nothing is recomputed in either direction, and no report becomes a dashboard.
+   *
+   * Filters are not applied - a dashboard answers "what needs attention right now?" across
+   * everything in scope for the actor, so it uses unfiltered projections. Actor scope is
+   * still enforced, by the projection layer.
+   */
+  async generateOperationsDashboard(
+    scope: ProjectionScope,
+    role: OperationsDashboardRole = "OPERATIONS_MANAGER",
+  ): Promise<OperationsDashboard> {
+    const filters = createUnfilteredDashboardFilters();
+
+    const [batches, branches, processing, proofs] = await Promise.all([
+      this.generateBatchReport(scope, { ...filters, reportType: "SHARED_BATCHES" }),
+      this.generateBranchReport(scope, { ...filters, reportType: "BRANCH_PERFORMANCE" }),
+      this.generateProcessingReport(scope, { ...filters, reportType: "TRANSACTIONS" }),
+      this.generateProofReport(scope, { ...filters, reportType: "PROOF_COMPLETION" }),
+    ]);
+
+    return buildOperationsDashboard(
+      {
+        batches: batches.rows,
+        branches: branches.rows,
+        processing: processing.rows,
+        proofs: proofs.rows,
+      },
+      role,
+    );
+  }
+
   private assertValidFilters(filters: ReportFilter): void {
     if (!this.validateFilters(filters)) {
       throw new Error("The selected date range is invalid.");
@@ -550,4 +590,15 @@ function compareAscending(first: string, second: string): number {
 
 function compareDescending(first: string, second: string): number {
   return second.localeCompare(first);
+}
+
+/** A dashboard reads across everything in the actor's scope, so no filter is applied. */
+function createUnfilteredDashboardFilters(): ReportFilter {
+  return {
+    fromDate: null,
+    toDate: null,
+    branchId: null,
+    batchReference: null,
+    reportType: "SHARED_BATCHES",
+  };
 }

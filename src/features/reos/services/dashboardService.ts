@@ -8,51 +8,84 @@ import type {
   ExceptionCenterItem,
   OperationsDashboard,
   OperationsDashboardRole,
-  OperationsDashboardSourceData,
   TodaySummaryMetric,
   WorkQueueItem,
 } from "../types/dashboard";
-import type { ProofDownloadBatch } from "../types/proofDownload";
-import type { SharedBatch } from "../types/sharedBatch";
-import type { BranchProcessingBatch, CreditToAccountTransaction } from "../types/transactionProcessing";
+import type {
+  BatchReportProjection,
+  BranchReportProjection,
+  ProcessingReportProjection,
+  ProofReportProjection,
+} from "../types/reportingProjection";
 
-const defaultRevenueRate = 0;
+/**
+ * Operations Dashboard assembly (data source replaced in Sprint 16 M4.5).
+ *
+ * This service builds the dashboard view model only. It no longer reads operational
+ * entities: its input is now the reporting projections, supplied by reportService, which
+ * obtains them from the Reporting Projection Layer. That makes the projection layer the
+ * single reader of operational state for both Reporting and Dashboards, as designed in
+ * REPORTING_ARCHITECTURE.md Section 10.1.
+ *
+ * The output type (OperationsDashboard and every row type it contains) is unchanged, so
+ * every dashboard component renders exactly as before - no widget, card, chart or style
+ * was altered. Only where the numbers come from changed.
+ *
+ * Two categories of value are deliberately not produced here:
+ * - Financial metrics (USD value, revenue). REPORTING_STANDARDS.md places them out of
+ *   scope, and the projection layer carries no aggregate amounts by design. The fields
+ *   remain in the view model at 0 because removing them is Decision D-9 and would require
+ *   changing components, which is out of this milestone's scope.
+ * - Duration metrics (processing speed). Nothing in REOS records a completion timestamp
+ *   (Decision D-6), so these stay null and render as "No data" - the same value they
+ *   resolved to before, for the same reason.
+ */
+
 const delayedPayoutMinutes = 120;
 
+export interface OperationsDashboardProjections {
+  batches: readonly BatchReportProjection[];
+  branches: readonly BranchReportProjection[];
+  processing: readonly ProcessingReportProjection[];
+  proofs: readonly ProofReportProjection[];
+  now?: Date;
+}
+
 export function buildOperationsDashboard(
-  sourceData: OperationsDashboardSourceData,
+  projections: OperationsDashboardProjections,
   role: OperationsDashboardRole = "OPERATIONS_MANAGER",
 ): OperationsDashboard {
-  const now = sourceData.now ?? new Date();
-  const revenueRate = sourceData.revenueRate ?? defaultRevenueRate;
-  const sharedBatches = sourceData.sharedBatches ?? [];
-  const processingBatches = sourceData.processingBatches ?? [];
-  const proofDownloadBatches = sourceData.proofDownloadBatches ?? [];
-  const transactions = processingBatches.flatMap((batch) => batch.transactions);
-  const todaysTransactions = transactions.filter((transaction) => isSameOperationalDay(transaction.beneficiary.transactionDate, now));
-  const completedToday = todaysTransactions.filter((transaction) => transaction.status === "COMPLETED");
-  const returnedTransactions = transactions.filter((transaction) => transaction.status === "RETURNED");
-  const missingProofTransactions = transactions.filter(
-    (transaction) => transaction.status === "COMPLETED" && transaction.proofs.length === 0,
+  const now = projections.now ?? new Date();
+  const batches = projections.batches ?? [];
+  const branches = projections.branches ?? [];
+  const processing = projections.processing ?? [];
+  const proofs = projections.proofs ?? [];
+
+  const todaysTransactions = processing.filter((transaction) =>
+    isSameOperationalDay(transaction.transactionDate, now),
   );
-  const duplicateReferences = transactions.filter((transaction) => transaction.beneficiary.manualReviewRequired);
-  const validationFailures = transactions.filter((transaction) => Boolean(transaction.beneficiary.manualReviewReason));
-  const assignmentProblems = sharedBatches.filter(
+  const completedToday = todaysTransactions.filter((transaction) => transaction.queueStatus === "COMPLETED");
+  const returnedTransactions = processing.filter((transaction) => transaction.queueStatus === "RETURNED");
+  const missingProofTransactions = processing.filter(
+    (transaction) => transaction.queueStatus === "COMPLETED" && transaction.proofCount === 0,
+  );
+  const duplicateReferences = processing.filter((transaction) => transaction.manualReviewRequired);
+  const validationFailures = processing.filter((transaction) => Boolean(transaction.manualReviewReason));
+  const assignmentProblems = batches.filter(
     (batch) => batch.assignmentStatus === "UNASSIGNED" || !batch.assignedBranchId,
   );
-  const usdValueToday = sumUsdValue(todaysTransactions);
-  const revenueToday = usdValueToday * revenueRate;
-  const averageProcessingTime = getAverageProcessingMinutes(completedToday);
-  const readyForDownload = countLifecycle(sharedBatches, "READY_FOR_DOWNLOAD") + countProofLifecycle(proofDownloadBatches, "READY_FOR_DOWNLOAD");
-  const downloadedBatches = countLifecycle(sharedBatches, "DOWNLOADED") + countProofLifecycle(proofDownloadBatches, "DOWNLOADED");
-  const branchPerformance = buildBranchPerformance(sourceData, transactions, revenueRate);
-  const workQueue = buildWorkQueue(sharedBatches, proofDownloadBatches, now);
+
+  const averageProcessingTime = getAverageProcessingMinutes();
+  const readyForDownload = countLifecycle(batches, "READY_FOR_DOWNLOAD");
+  const downloadedBatches = countLifecycle(batches, "DOWNLOADED");
+  const branchPerformance = buildBranchPerformance(branches, processing);
+  const workQueue = buildWorkQueue(batches, now);
   const exceptions = buildExceptions({
-    returnedTransactions,
-    missingProofTransactions,
-    duplicateReferences,
-    validationFailures,
-    assignmentProblems,
+    returnedTransactions: returnedTransactions.length,
+    missingProofs: missingProofTransactions.length,
+    duplicateReferences: duplicateReferences.length,
+    validationFailures: validationFailures.length,
+    assignmentProblems: assignmentProblems.length,
   });
 
   return {
@@ -60,39 +93,35 @@ export function buildOperationsDashboard(
     role,
     stats: buildStats({
       transactionsToday: todaysTransactions.length,
-      usdValueToday,
-      revenueToday,
       averageProcessingTime,
-      completedBatches: countLifecycle(sharedBatches, "COMPLETED"),
+      completedBatches: countLifecycle(batches, "COMPLETED"),
       readyForDownload,
       downloadedBatches,
       returnedTransactions: returnedTransactions.length,
     }),
     criticalAlerts: buildCriticalAlerts({
       branchPerformance,
-      delayedPayouts: getDelayedPayoutCount(processingBatches, now),
+      delayedPayouts: getDelayedPayoutCount(processing, now),
       missingProofs: missingProofTransactions.length,
-      readyForDownload,
-      processingBacklog: workQueue.filter((item) => item.category === "OLDEST_ASSIGNED_BATCH" || item.category === "OLDEST_PROCESSING_BATCH").length,
+      processingBacklog: workQueue.filter(
+        (item) => item.category === "OLDEST_ASSIGNED_BATCH" || item.category === "OLDEST_PROCESSING_BATCH",
+      ).length,
     }),
     branchPerformance,
     workQueue,
     exceptions,
     todaySummary: buildTodaySummary({
       transactionsProcessed: completedToday.length,
-      usdProcessed: sumUsdValue(completedToday),
-      revenue: sumUsdValue(completedToday) * revenueRate,
       averageProcessingTime,
       branchPerformance,
-      returnRate: getRate(returnedTransactions.length, transactions.length),
+      returnRate: getRate(returnedTransactions.length, processing.length),
+      proofCount: proofs.length,
     }),
   };
 }
 
 function buildStats(input: {
   transactionsToday: number;
-  usdValueToday: number;
-  revenueToday: number;
   averageProcessingTime: number | null;
   completedBatches: number;
   readyForDownload: number;
@@ -101,8 +130,8 @@ function buildStats(input: {
 }): DashboardStat[] {
   return [
     createStat("transactions-today", "Transactions Today", input.transactionsToday.toString(), "Current operational volume"),
-    createStat("usd-value-today", "USD Value Today", formatCurrency(input.usdValueToday), "Value requiring cash and liquidity oversight"),
-    createStat("revenue-today", "Revenue Today", formatCurrency(input.revenueToday), "Revenue from today's processed value"),
+    createStat("usd-value-today", "USD Value Today", formatCurrency(0), "Value requiring cash and liquidity oversight"),
+    createStat("revenue-today", "Revenue Today", formatCurrency(0), "Revenue from today's processed value"),
     createStat(
       "average-processing-time",
       "Average Processing Time",
@@ -120,11 +149,14 @@ function buildCriticalAlerts(input: {
   branchPerformance: BranchPerformanceRow[];
   delayedPayouts: number;
   missingProofs: number;
-  readyForDownload: number;
   processingBacklog: number;
 }): CriticalAlert[] {
-  const branchesNotProcessing = input.branchPerformance.filter((branch) => branch.currentWorkload > 0 && branch.processingSpeedMinutes === null).length;
-  const liquidityIssues = input.branchPerformance.filter((branch) => branch.health === "RED" && branch.currentWorkload > 0).length;
+  const branchesNotProcessing = input.branchPerformance.filter(
+    (branch) => branch.currentWorkload > 0 && branch.processingSpeedMinutes === null,
+  ).length;
+  const liquidityIssues = input.branchPerformance.filter(
+    (branch) => branch.health === "RED" && branch.currentWorkload > 0,
+  ).length;
 
   return [
     createAlert(
@@ -170,105 +202,104 @@ function buildCriticalAlerts(input: {
   ];
 }
 
+/**
+ * Branch rows come straight from BranchReportProjection, whose queue counts are supplied
+ * verbatim by branchProcessingQueueService.getBranchProcessingQueueSummary through the
+ * projection layer - they are never recomputed here. Only the manual-review error count
+ * is derived, because no existing summary provides it per branch.
+ */
 function buildBranchPerformance(
-  sourceData: OperationsDashboardSourceData,
-  transactions: CreditToAccountTransaction[],
-  revenueRate: number,
+  branches: readonly BranchReportProjection[],
+  processing: readonly ProcessingReportProjection[],
 ): BranchPerformanceRow[] {
-  const branchIds = new Set<string>();
+  return branches
+    .map((branch) => {
+      const errors = processing.filter(
+        (transaction) => transaction.branchId === branch.branchId && transaction.manualReviewRequired,
+      ).length;
+      const workload = branch.queueRemaining;
+      const returns = branch.queueReturned;
+      const speed = getAverageProcessingMinutes();
 
-  for (const branch of sourceData.branches ?? []) {
-    branchIds.add(branch.id);
-  }
-
-  for (const batch of sourceData.processingBatches ?? []) {
-    branchIds.add(batch.assignedBranchId);
-  }
-
-  for (const transaction of transactions) {
-    if (transaction.beneficiary.assignedBranchId) {
-      branchIds.add(transaction.beneficiary.assignedBranchId);
-    }
-  }
-
-  return Array.from(branchIds).map((branchId) => {
-    const branch = sourceData.branches?.find((item) => item.id === branchId);
-    const branchTransactions = transactions.filter(
-      (transaction) => transaction.beneficiary.assignedBranchId === branchId,
-    );
-    const workload = branchTransactions.filter((transaction) => transaction.status === "PENDING").length;
-    const returns = branchTransactions.filter((transaction) => transaction.status === "RETURNED").length;
-    const errors = branchTransactions.filter((transaction) => transaction.beneficiary.manualReviewRequired).length;
-    const usdValue = sumUsdValue(branchTransactions);
-    const speed = getAverageProcessingMinutes(branchTransactions.filter((transaction) => transaction.status === "COMPLETED"));
-
-    return {
-      branchId,
-      branchName: branch?.name ?? branchId,
-      transactions: branchTransactions.length,
-      usdValue,
-      revenue: usdValue * revenueRate,
-      processingSpeedMinutes: speed,
-      errors,
-      returns,
-      currentWorkload: workload,
-      health: getBranchHealth(workload, returns, errors, speed),
-    };
-  }).sort((left, right) => right.currentWorkload - left.currentWorkload || left.branchName.localeCompare(right.branchName));
+      return {
+        branchId: branch.branchId,
+        branchName: branch.branchName,
+        transactions: branch.queueTotal,
+        usdValue: 0,
+        revenue: 0,
+        processingSpeedMinutes: speed,
+        errors,
+        returns,
+        currentWorkload: workload,
+        health: getBranchHealth(workload, returns, errors, speed),
+      };
+    })
+    .sort((left, right) => right.currentWorkload - left.currentWorkload || left.branchName.localeCompare(right.branchName));
 }
 
-function buildWorkQueue(sharedBatches: SharedBatch[], proofDownloadBatches: ProofDownloadBatch[], now: Date): WorkQueueItem[] {
+/**
+ * The DOWNLOAD_PENDING category previously came from a separate proofDownloadBatches
+ * input list, which in practice held the same batches as the Shared Batch list. With one
+ * batch projection there is no second source, and emitting a batch under both
+ * READY_FOR_DOWNLOAD and DOWNLOAD_PENDING would double-count it in the work queue. The
+ * category remains defined and rendered; it simply has no separate source to draw from.
+ */
+function buildWorkQueue(batches: readonly BatchReportProjection[], now: Date): WorkQueueItem[] {
   const queue: WorkQueueItem[] = [
-    ...sharedBatches
+    ...batches
       .filter((batch) => batch.lifecycleStatus === "ASSIGNED")
-      .map((batch) => createQueueItem("OLDEST_ASSIGNED_BATCH", batch.id, batch.reference, batch.assignedBranchId, batch.assignedAt ?? batch.uploadDate, now)),
-    ...sharedBatches
+      .map((batch) =>
+        createQueueItem("OLDEST_ASSIGNED_BATCH", batch.sharedBatchId, batch.batchReference, batch.assignedBranchId, batch.assignedAt ?? batch.uploadDate, now),
+      ),
+    ...batches
       .filter((batch) => batch.lifecycleStatus === "PROCESSING")
-      .map((batch) => createQueueItem("OLDEST_PROCESSING_BATCH", batch.id, batch.reference, batch.assignedBranchId, batch.assignedAt ?? batch.uploadDate, now)),
-    ...sharedBatches
+      .map((batch) =>
+        createQueueItem("OLDEST_PROCESSING_BATCH", batch.sharedBatchId, batch.batchReference, batch.assignedBranchId, batch.assignedAt ?? batch.uploadDate, now),
+      ),
+    ...batches
       .filter((batch) => batch.lifecycleStatus === "READY_FOR_DOWNLOAD")
-      .map((batch) => createQueueItem("READY_FOR_DOWNLOAD", batch.id, batch.reference, batch.assignedBranchId, batch.uploadDate, now)),
-    ...proofDownloadBatches
-      .filter((batch) => batch.lifecycleStatus === "READY_FOR_DOWNLOAD")
-      .map((batch) => createQueueItem("DOWNLOAD_PENDING", batch.id, batch.sharedBatchReference, batch.assignedBranchId, batch.completedAt, now)),
-    ...sharedBatches
-      .filter((batch) => batch.returnedBeneficiaries > 0)
-      .map((batch) => createQueueItem("RETURNED_BATCHES", batch.id, batch.reference, batch.assignedBranchId, batch.uploadDate, now)),
+      .map((batch) =>
+        createQueueItem("READY_FOR_DOWNLOAD", batch.sharedBatchId, batch.batchReference, batch.assignedBranchId, batch.uploadDate, now),
+      ),
+    ...batches
+      .filter((batch) => (batch.returnedTransactionCount ?? 0) > 0)
+      .map((batch) =>
+        createQueueItem("RETURNED_BATCHES", batch.sharedBatchId, batch.batchReference, batch.assignedBranchId, batch.uploadDate, now),
+      ),
   ];
 
   return queue.sort((left, right) => right.urgency - left.urgency || right.ageMinutes - left.ageMinutes);
 }
 
 function buildExceptions(input: {
-  returnedTransactions: CreditToAccountTransaction[];
-  missingProofTransactions: CreditToAccountTransaction[];
-  duplicateReferences: CreditToAccountTransaction[];
-  validationFailures: CreditToAccountTransaction[];
-  assignmentProblems: SharedBatch[];
+  returnedTransactions: number;
+  missingProofs: number;
+  duplicateReferences: number;
+  validationFailures: number;
+  assignmentProblems: number;
 }): ExceptionCenterItem[] {
   return [
-    createException("RETURNED_TRANSACTIONS", "Returned Transactions", input.returnedTransactions.length, "Review return reasons and decide next action."),
-    createException("MISSING_PROOFS", "Missing Proofs", input.missingProofTransactions.length, "Resolve proof gaps before download handoff."),
-    createException("DUPLICATE_REFERENCES", "Duplicate References", input.duplicateReferences.length, "Review duplicate references before processing continues."),
-    createException("VALIDATION_FAILURES", "Validation Failures", input.validationFailures.length, "Resolve records that failed import validation."),
-    createException("BATCH_ASSIGNMENT_PROBLEMS", "Batch Assignment Problems", input.assignmentProblems.length, "Assign or correct batches with no branch owner."),
+    createException("RETURNED_TRANSACTIONS", "Returned Transactions", input.returnedTransactions, "Review return reasons and decide next action."),
+    createException("MISSING_PROOFS", "Missing Proofs", input.missingProofs, "Resolve proof gaps before download handoff."),
+    createException("DUPLICATE_REFERENCES", "Duplicate References", input.duplicateReferences, "Review duplicate references before processing continues."),
+    createException("VALIDATION_FAILURES", "Validation Failures", input.validationFailures, "Resolve records that failed import validation."),
+    createException("BATCH_ASSIGNMENT_PROBLEMS", "Batch Assignment Problems", input.assignmentProblems, "Assign or correct batches with no branch owner."),
   ];
 }
 
 function buildTodaySummary(input: {
   transactionsProcessed: number;
-  usdProcessed: number;
-  revenue: number;
   averageProcessingTime: number | null;
   branchPerformance: BranchPerformanceRow[];
   returnRate: number;
+  proofCount: number;
 }): TodaySummaryMetric[] {
   const topBranch = input.branchPerformance[0]?.branchName ?? "No branch activity";
 
   return [
     { label: "Transactions Processed", value: input.transactionsProcessed.toString(), detail: "Completed today" },
-    { label: "USD Processed", value: formatCurrency(input.usdProcessed), detail: "Completed value today" },
-    { label: "Revenue", value: formatCurrency(input.revenue), detail: "Revenue from processed value" },
+    { label: "USD Processed", value: formatCurrency(0), detail: "Completed value today" },
+    { label: "Revenue", value: formatCurrency(0), detail: "Revenue from processed value" },
     { label: "Average Processing Time", value: formatMinutes(input.averageProcessingTime), detail: "Completed transactions today" },
     { label: "Branch Ranking", value: topBranch, detail: "Highest current workload" },
     { label: "Return Rate", value: `${input.returnRate.toFixed(1)}%`, detail: "Returned transactions over total tracked" },
@@ -384,38 +415,29 @@ function formatQueueCategory(category: DashboardQueueCategory): string {
   return labels[category];
 }
 
-function countLifecycle(sharedBatches: SharedBatch[], status: SharedBatch["lifecycleStatus"]): number {
-  return sharedBatches.filter((batch) => batch.lifecycleStatus === status).length;
+function countLifecycle(
+  batches: readonly BatchReportProjection[],
+  status: BatchReportProjection["lifecycleStatus"],
+): number {
+  return batches.filter((batch) => batch.lifecycleStatus === status).length;
 }
 
-function countProofLifecycle(proofDownloadBatches: ProofDownloadBatch[], status: ProofDownloadBatch["lifecycleStatus"]): number {
-  return proofDownloadBatches.filter((batch) => batch.lifecycleStatus === status).length;
-}
-
-function getDelayedPayoutCount(processingBatches: BranchProcessingBatch[], now: Date): number {
-  return processingBatches.filter((batch) =>
-    batch.transactions.some((transaction) =>
-      transaction.status === "PENDING" && getAgeMinutes(transaction.beneficiary.transactionDate, now) > delayedPayoutMinutes,
-    ),
+function getDelayedPayoutCount(processing: readonly ProcessingReportProjection[], now: Date): number {
+  return processing.filter(
+    (transaction) =>
+      transaction.queueStatus !== "COMPLETED" &&
+      transaction.queueStatus !== "RETURNED" &&
+      getAgeMinutes(transaction.transactionDate, now) > delayedPayoutMinutes,
   ).length;
 }
 
-function getAverageProcessingMinutes(transactions: CreditToAccountTransaction[]): number | null {
-  const durations = transactions
-    .map((transaction) => {
-      if (!transaction.completedAt) {
-        return null;
-      }
-
-      return getAgeMinutes(transaction.beneficiary.transactionDate, new Date(transaction.completedAt));
-    })
-    .filter((duration): duration is number => duration !== null && duration >= 0);
-
-  if (durations.length === 0) {
-    return null;
-  }
-
-  return durations.reduce((total, duration) => total + duration, 0) / durations.length;
+/**
+ * Always null: no completion timestamp is recorded anywhere in the live workflow
+ * (Decision D-6), so an average processing time cannot be derived. It resolved to the
+ * same "No data" before this change, because the only field it read was never populated.
+ */
+function getAverageProcessingMinutes(): number | null {
+  return null;
 }
 
 function getAgeMinutes(value: string, now: Date): number {
@@ -426,16 +448,6 @@ function getAgeMinutes(value: string, now: Date): number {
   }
 
   return Math.max(0, Math.floor((now.getTime() - timestamp) / 60000));
-}
-
-function sumUsdValue(transactions: CreditToAccountTransaction[]): number {
-  return transactions.reduce((total, transaction) => {
-    if (transaction.beneficiary.currency !== "USD") {
-      return total;
-    }
-
-    return total + transaction.beneficiary.amount;
-  }, 0);
 }
 
 function getRate(numerator: number, denominator: number): number {
@@ -463,9 +475,5 @@ function formatCurrency(value: number): string {
 }
 
 function formatMinutes(value: number | null): string {
-  if (value === null) {
-    return "No data";
-  }
-
-  return `${Math.round(value)} min`;
+  return value === null ? "No data" : `${Math.round(value)} min`;
 }

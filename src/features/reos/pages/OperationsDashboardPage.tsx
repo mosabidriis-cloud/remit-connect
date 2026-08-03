@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { BranchPerformanceTable } from "../components/BranchPerformanceTable";
 import { KpiCard } from "../components/common/KpiCard";
 import { PageContainer } from "../components/common/PageContainer";
@@ -8,20 +7,63 @@ import { CriticalAlertCard } from "../components/CriticalAlertCard";
 import { ExceptionCenter } from "../components/ExceptionCenter";
 import { TodaySummary } from "../components/TodaySummary";
 import { WorkQueueTable } from "../components/WorkQueueTable";
-import { buildOperationsDashboard } from "../services/dashboardService";
-import type { OperationsDashboardRole, OperationsDashboardSourceData } from "../types/dashboard";
+import { reportService } from "../services/reportService";
+import type { OperationsDashboard, OperationsDashboardRole } from "../types/dashboard";
+import type { ProjectionScope } from "../types/reportingProjection";
 
-type OperationsDashboardLocationState = OperationsDashboardSourceData & {
-  role?: OperationsDashboardRole;
+/**
+ * Operations Dashboard page (data source replaced in Sprint 16 M4.5).
+ *
+ * Reads live operational data through reportService, which is its only service dependency.
+ * It does not import an operational store, the projection layer, or dashboardService, and
+ * it performs no aggregation of its own - every value on this page is produced by the
+ * Report Service from reporting projections.
+ *
+ * Before M4.5 this page took its data from React Router location.state, and nothing ever
+ * navigated here with state, so every KPI rendered 0 for a real user.
+ */
+
+/**
+ * REOS has no current-user context yet, so the acting user is fixed here - the same
+ * approach ReportsPage and ProofDownloadPage take. The dashboard is an Operations Manager
+ * capability (BUSINESS_RULES.md) and that role has enterprise-wide visibility, which is
+ * the correct scope for this page. Recorded in TECH_DEBT.md.
+ */
+const dashboardActor: ProjectionScope = {
+  actorUserId: "OPERATIONS_MANAGER",
+  actorRole: "OPERATIONS_MANAGER",
+  branchId: null,
 };
 
+const dashboardRole: OperationsDashboardRole = "OPERATIONS_MANAGER";
+
 export function OperationsDashboardPage() {
-  const location = useLocation();
-  const state = location.state as OperationsDashboardLocationState | null;
-  const dashboard = useMemo(
-    () => buildOperationsDashboard(state ?? {}, state?.role ?? "OPERATIONS_MANAGER"),
-    [state],
-  );
+  const [dashboard, setDashboard] = useState<OperationsDashboard | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setError(null);
+
+    reportService
+      .generateOperationsDashboard(dashboardActor, dashboardRole)
+      .then((generated) => {
+        if (!cancelled) {
+          setDashboard(generated);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setDashboard(null);
+          setError(cause instanceof Error ? cause.message : "The dashboard could not be generated.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleDrillDown = (path: string) => {
     const targetId = path.split("#")[1];
@@ -33,29 +75,31 @@ export function OperationsDashboardPage() {
     document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const visibleStats = dashboard.stats.filter((stat) => !["USD Value Today", "Revenue Today"].includes(stat.label));
+  const visibleStats = (dashboard?.stats ?? []).filter(
+    (stat) => !["USD Value Today", "Revenue Today"].includes(stat.label),
+  );
 
   return (
     <PageContainer>
       <PageHeader
         actions={
           <div className="text-right text-sm text-slate-600">
-            <div className="font-medium text-slate-900">{formatRole(dashboard.role)}</div>
-            <div>Updated {formatDateTime(dashboard.generatedAt)}</div>
+            <div className="font-medium text-slate-900">Operations Manager</div>
+            <div>Updated {formatDateTime(dashboard?.generatedAt ?? new Date().toISOString())}</div>
           </div>
         }
         description="What requires the Operations Manager's attention right now?"
         title="Operations Command Center"
       />
 
-      {dashboard.role === "GENERAL_MANAGER" ? (
-        <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          General Manager access is read-only overview only.
+      {error ? (
+        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
         </div>
       ) : null}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {dashboard.criticalAlerts.map((alert) => (
+        {(dashboard?.criticalAlerts ?? []).map((alert) => (
           <CriticalAlertCard alert={alert} key={alert.id} onDrillDown={handleDrillDown} />
         ))}
       </section>
@@ -66,16 +110,12 @@ export function OperationsDashboardPage() {
         ))}
       </section>
 
-      <BranchPerformanceTable branches={dashboard.branchPerformance} />
-      <WorkQueueTable items={dashboard.workQueue} />
-      <ExceptionCenter items={dashboard.exceptions} onDrillDown={handleDrillDown} />
-      <TodaySummary metrics={dashboard.todaySummary} />
+      <BranchPerformanceTable branches={dashboard?.branchPerformance ?? []} />
+      <WorkQueueTable items={dashboard?.workQueue ?? []} />
+      <ExceptionCenter items={dashboard?.exceptions ?? []} onDrillDown={handleDrillDown} />
+      <TodaySummary metrics={dashboard?.todaySummary ?? []} />
     </PageContainer>
   );
-}
-
-function formatRole(role: OperationsDashboardRole): string {
-  return role === "GENERAL_MANAGER" ? "General Manager Overview" : "Operations Manager";
 }
 
 function formatDateTime(value: string): string {
