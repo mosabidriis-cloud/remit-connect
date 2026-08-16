@@ -19,21 +19,6 @@ export default function Sidebar() {
       path: "/credit-account",
       icon: "CA",
     },
-    {
-      title: "Branch Liquidity",
-      path: "/branch-liquidity",
-      icon: "BL",
-    },
-    {
-      title: "Treasury Decisions",
-      path: "/treasury-decisions",
-      icon: "TD",
-    },
-    {
-      title: "Funding Execution",
-      path: "/funding-execution",
-      icon: "FE",
-    },
   ];
 
   return (

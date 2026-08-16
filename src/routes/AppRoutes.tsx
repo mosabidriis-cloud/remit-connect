@@ -1,11 +1,7 @@
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginPage from "../pages/auth/LoginPage";
 import Dashboard from "../pages/controller/Dashboard";
-import BranchListPage from "../pages/branches/BranchListPage";
-import BranchDetailsPage from "../pages/branches/BranchDetailsPage";
-import TreasuryPage from "../pages/treasury/TreasuryPage";
-import FundingRequestPage from "../pages/funding/FundingRequestPage";
 import SharedBatchListPage from "../pages/shared-batches/SharedBatchListPage";
 import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPage";
 import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
@@ -31,12 +27,6 @@ import { UserDetailsPage } from "../features/reos/pages/UserDetailsPage";
 import { UserEditPage } from "../features/reos/pages/UserEditPage";
 import { UserListPage } from "../features/reos/pages/UserListPage";
 import { OperationsDashboardPage } from "../features/reos/pages/OperationsDashboardPage";
-
-function LegacyBranchRedirect() {
-  const { branchId } = useParams();
-
-  return <Navigate to={`/branch-liquidity/${branchId}`} replace />;
-}
 
 // Route -> role map, AUTHENTICATION.md Section 6.
 const OM = ["OPERATIONS_MANAGER"] as const;
@@ -98,21 +88,9 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      <Route path="/branch-liquidity" element={<BranchListPage />} />
-      <Route path="/branch-liquidity/:branchId" element={<BranchDetailsPage />} />
-      <Route path="/treasury-decisions" element={<TreasuryPage />} />
-      <Route path="/funding-execution" element={<FundingRequestPage />} />
-
       <Route
         path="/controller/dashboard"
         element={<Navigate to="/operations-command" replace />}
-      />
-      <Route path="/branches" element={<Navigate to="/branch-liquidity" replace />} />
-      <Route path="/branches/:branchId" element={<LegacyBranchRedirect />} />
-      <Route path="/treasury" element={<Navigate to="/treasury-decisions" replace />} />
-      <Route
-        path="/funding-requests"
-        element={<Navigate to="/funding-execution" replace />}
       />
 
       <Route path="*" element={<h1>404 - Page Not Found</h1>} />
