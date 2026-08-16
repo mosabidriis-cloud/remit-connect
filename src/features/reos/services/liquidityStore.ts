@@ -20,8 +20,29 @@ type PayoutAccountRow = Database["public"]["Tables"]["payout_accounts"]["Row"];
 type FundingEventRow = Database["public"]["Tables"]["funding_events"]["Row"];
 type FundingEntryRow = Database["public"]["Tables"]["funding_entries"]["Row"];
 
-export async function savePayoutAccount(account: PayoutAccount): Promise<PayoutAccount> {
-  const { error } = await supabase.from("payout_accounts").upsert(payoutAccountToRow(account));
+/**
+ * DEC-024: split from a single `upsert`-based `savePayoutAccount` into distinct
+ * insert/update paths so `payout_accounts_insert` RLS can be Operations-Manager-only
+ * without blocking a Branch Officer's legitimate balance updates (`deductForTransaction`,
+ * `recordFunding`) - an `upsert` requires the INSERT policy to pass even when the
+ * statement resolves as an update, which is exactly the gap DEC-021 provisionally
+ * accepted and DEC-024 closes.
+ */
+export async function insertPayoutAccount(account: PayoutAccount): Promise<PayoutAccount> {
+  const { error } = await supabase.from("payout_accounts").insert(payoutAccountToRow(account));
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return account;
+}
+
+export async function updatePayoutAccountRecord(account: PayoutAccount): Promise<PayoutAccount> {
+  const { error } = await supabase
+    .from("payout_accounts")
+    .update(payoutAccountToRow(account))
+    .eq("id", account.id);
 
   if (error) {
     throw new Error(error.message);

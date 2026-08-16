@@ -5,7 +5,8 @@ import {
   getFundingEventsByBranch,
   getPayoutAccount,
   getPayoutAccountsByBranch,
-  savePayoutAccount,
+  insertPayoutAccount,
+  updatePayoutAccountRecord,
   saveFundingEvent,
 } from "./liquidityStore";
 import type { FundingEntry, FundingEvent, PayoutAccount } from "../types/liquidity";
@@ -63,7 +64,7 @@ export async function addPayoutAccount(input: AddPayoutAccountInput): Promise<Pa
     lastUpdatedByUserId: input.actorUserId,
   };
 
-  const savedAccount = await savePayoutAccount(account);
+  const savedAccount = await insertPayoutAccount(account);
 
   await recordAuditEvent({
     actorUserId: input.actorUserId,
@@ -106,7 +107,7 @@ export async function updatePayoutAccount(input: UpdatePayoutAccountInput): Prom
     throw new Error("Minimum threshold cannot be negative.");
   }
 
-  const savedAccount = await savePayoutAccount({
+  const savedAccount = await updatePayoutAccountRecord({
     ...account,
     bank: input.bank.trim(),
     accountNumber: input.accountNumber.trim(),
@@ -139,7 +140,7 @@ export async function setPayoutAccountStatus(
     throw new Error("Payout account was not found.");
   }
 
-  const savedAccount = await savePayoutAccount({
+  const savedAccount = await updatePayoutAccountRecord({
     ...account,
     status,
     lastUpdatedAt: new Date().toISOString(),
@@ -205,7 +206,7 @@ export async function recordFunding(input: RecordFundingInput): Promise<FundingE
     const previousBalance = account.currentBalance;
     const newBalance = previousBalance + amount;
 
-    await savePayoutAccount({
+    await updatePayoutAccountRecord({
       ...account,
       currentBalance: newBalance,
       lastUpdatedAt: new Date().toISOString(),
@@ -262,7 +263,7 @@ export async function deductForTransaction(accountId: string, amount: number, ac
     throw new Error("Insufficient balance on the selected payout account.");
   }
 
-  return savePayoutAccount({
+  return updatePayoutAccountRecord({
     ...account,
     currentBalance: account.currentBalance - amount,
     lastUpdatedAt: new Date().toISOString(),
