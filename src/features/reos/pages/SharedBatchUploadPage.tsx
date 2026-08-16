@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { AssignmentSummary } from "../components/AssignmentSummary";
 import { BatchSummary } from "../components/BatchSummary";
 import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
@@ -7,21 +8,35 @@ import {
   type BranchProcessingNavigationTarget,
 } from "../components/BranchProcessingNavigation";
 import { ConfirmUploadDialog } from "../components/ConfirmUploadDialog";
+import { DuplicateImportDialog } from "../components/DuplicateImportDialog";
+import { ImportRecordSummary } from "../components/ImportRecordSummary";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { UploadProgress } from "../components/UploadProgress";
 import { UploadZone } from "../components/UploadZone";
 import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
+import { recordAuditEvent } from "../services/auditService";
 import { assignSharedBatchToBranch } from "../services/branchAssignmentService";
 import { validateExcelUpload } from "../services/excelValidationService";
-import { saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
-import { spacing } from "../theme";
+import {
+  checkForDuplicateImport,
+  computeFileChecksum,
+  deriveReportingPeriod,
+  persistImport,
+} from "../services/importIntelligenceService";
+import { useReosSession } from "../layout/reosAuthContext";
+import { getImportHistoryEntries } from "../services/operationalDatasetService";
+import { saveAssignment, saveBeneficiaries, saveSharedBatch } from "../services/sharedBatchStore";
+import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
+import type { ImportBatchRecord } from "../types/importIntelligence";
+import type { CoverageImpact } from "../types/operationalDataset";
 import type { SharedBatch } from "../types/sharedBatch";
 
 export function SharedBatchUploadPage() {
+  const { session } = useReosSession();
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isValidationComplete, setIsValidationComplete] = useState(false);
@@ -52,7 +67,21 @@ export function SharedBatchUploadPage() {
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Import Intelligence (DEC-016, IMPORT_INTELLIGENCE.md) - durable ledger, not the live
+  // operational workflow above. Failing to check/persist never blocks assignment.
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileChecksum, setFileChecksum] = useState<string | null>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<ImportBatchRecord[]>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [importRecord, setImportRecord] = useState<ImportBatchRecord | null>(null);
+  const [importCoverageImpact, setImportCoverageImpact] = useState<CoverageImpact | null>(null);
+  const [importIntelligenceError, setImportIntelligenceError] = useState<string | null>(null);
+
   const handleUpload = async (file: File) => {
+    if (!session) {
+      return;
+    }
+
     setSelectedFileName(file.name);
     setProgress(0);
     setValidationError(null);
@@ -69,22 +98,130 @@ export function SharedBatchUploadPage() {
     setIsValidationComplete(false);
     setIsUploading(true);
     setShowConfirmDialog(false);
+    setUploadedFile(file);
+    setFileChecksum(null);
+    setDuplicateMatches([]);
+    setShowDuplicateDialog(false);
+    setImportRecord(null);
+    setImportCoverageImpact(null);
+    setImportIntelligenceError(null);
 
     try {
-      const result = await validateExcelUpload(file);
+      const result = await validateExcelUpload(file, session.userId);
       setValidationSummary(result.summary);
       setValidationIssues(result.issues);
       setSharedBatch(result.sharedBatch);
-      saveSharedBatch(result.sharedBatch);
+      await saveSharedBatch(result.sharedBatch);
+      await saveBeneficiaries(result.sharedBatch.id, result.beneficiaries);
+      await recordAuditEvent({
+        actorUserId: session.userId,
+        action: "BATCH_UPLOADED",
+        entityType: "SHARED_BATCH",
+        entityId: result.sharedBatch.id,
+        details: `Uploaded Shared Batch ${result.sharedBatch.reference} (${file.name}, ${result.beneficiaries.length} beneficiaries).`,
+      });
       setAssignableBeneficiaries(result.beneficiaries);
       setProgress(100);
       setIsUploading(false);
       setIsValidationComplete(true);
+
+      // Fingerprint now, off the interactive path - ready by the time the operator
+      // reaches Confirm Upload, without making the upload itself feel slower.
+      computeFileChecksum(file)
+        .then(setFileChecksum)
+        .catch(() => setImportIntelligenceError("Unable to fingerprint this file for duplicate detection."));
     } catch (error) {
       setProgress(0);
       setIsUploading(false);
       setIsValidationComplete(false);
       setValidationError(error instanceof Error ? error.message : "The workbook could not be validated.");
+    }
+  };
+
+  /**
+   * Confirms the upload in the live workflow (unchanged) and, independently, records it
+   * in the durable Import Intelligence ledger. A ledger failure is surfaced as a
+   * non-blocking warning - it never prevents the operator from proceeding to Assignment,
+   * matching importIntelligenceService's own contract.
+   */
+  const finalizeConfirm = async (resolution?: { type: "REPLACE" | "MERGE"; existingBatchId: string }) => {
+    setValidationSummary((current) => (current ? { ...current, batchStatus: "READY_FOR_ASSIGNMENT", processingMode: "Process Valid Transactions Only" } : current));
+    setIsConfirmed(true);
+    setShowDuplicateDialog(false);
+
+    // BATCH_CONFIRMED depends only on session/sharedBatch, checked here on their own -
+    // this action is the confirmed-in-the-live-workflow fact, independent of whether
+    // computeFileChecksum's background promise (kicked off at upload, "off the
+    // interactive path") has resolved yet. Gating it behind that unrelated timing would
+    // silently drop the audit record exactly the way it already silently drops the
+    // Import Intelligence ledger entry below when confirmed before the checksum lands.
+    if (sharedBatch && session) {
+      await recordAuditEvent({
+        actorUserId: session.userId,
+        action: "BATCH_CONFIRMED",
+        entityType: "SHARED_BATCH",
+        entityId: sharedBatch.id,
+        details: `Confirmed Shared Batch ${sharedBatch.reference}.`,
+      });
+    }
+
+    if (!uploadedFile || !fileChecksum || !sharedBatch || !validationSummary || !session) {
+      return;
+    }
+
+    try {
+      const record = await persistImport({
+        sharedBatch,
+        beneficiaries: assignableBeneficiaries,
+        file: uploadedFile,
+        fileChecksum,
+        actorUserId: session.userId,
+        resolution,
+        validationOutcome: {
+          validRecordCount: validationSummary.validRecords,
+          invalidRecordCount: validationSummary.invalidRecords,
+          manualReviewRecordCount: validationSummary.manualReview,
+        },
+      });
+      setImportRecord(record);
+
+      // Best-effort - the Import Experience's "coverage impact" line. Never blocks or
+      // overrides the record above if it fails; it's read-only context on top of it.
+      getImportHistoryEntries()
+        .then((entries) => {
+          const matching = entries.find((entry) => entry.id === record.id);
+          if (matching) {
+            setImportCoverageImpact(matching.coverageImpact);
+          }
+        })
+        .catch(() => undefined);
+    } catch (error) {
+      setImportIntelligenceError(error instanceof Error ? error.message : "Unable to record this import in the Import Intelligence ledger.");
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    setShowConfirmDialog(false);
+
+    if (!uploadedFile || !fileChecksum || !sharedBatch) {
+      await finalizeConfirm();
+      return;
+    }
+
+    try {
+      const reportingPeriod = deriveReportingPeriod(assignableBeneficiaries);
+      const duplicateResult = await checkForDuplicateImport(fileChecksum, sharedBatch.reference, reportingPeriod);
+
+      if (duplicateResult.isDuplicate) {
+        setDuplicateMatches(duplicateResult.matches);
+        setShowDuplicateDialog(true);
+        return;
+      }
+
+      await finalizeConfirm();
+    } catch (error) {
+      setImportIntelligenceError(error instanceof Error ? error.message : "Unable to check for duplicate imports.");
+      await finalizeConfirm();
     }
   };
 
@@ -183,50 +320,63 @@ export function SharedBatchUploadPage() {
           ) : null}
           {isConfirmed && sharedBatch ? (
             <div style={{ marginTop: spacing.lg }}>
-              <BranchAssignmentPanel
-                assignment={assignment}
-                assignments={assignments}
-                assignedBeneficiaryIds={assignedBeneficiaryIds}
-                beneficiaries={assignableBeneficiaries}
-                isAssignmentConfirmed={isAssignmentFinalized}
-                isReadOnly={isAssignmentFinalized}
-                onConfirm={(branchId) => {
-                  const remainingReadyTransactions = assignableBeneficiaries.filter(
-                    (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
-                  );
+              {session?.role === "OPERATIONS_MANAGER" ? (
+                <BranchAssignmentPanel
+                  assignment={assignment}
+                  assignments={assignments}
+                  assignedBeneficiaryIds={assignedBeneficiaryIds}
+                  beneficiaries={assignableBeneficiaries}
+                  isAssignmentConfirmed={isAssignmentFinalized}
+                  isReadOnly={isAssignmentFinalized}
+                  onConfirm={async (branchId) => {
+                    const remainingReadyTransactions = assignableBeneficiaries.filter(
+                      (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
+                    );
 
-                  if (remainingReadyTransactions.length === 0) {
-                    return;
-                  }
+                    if (remainingReadyTransactions.length === 0) {
+                      return;
+                    }
 
-                  const result = assignSharedBatchToBranch({
-                    sharedBatch,
-                    beneficiaries: remainingReadyTransactions,
-                    branchId,
-                    branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
-                    assignedByUserId: "current-user",
-                    actorRole: "DIRECT_REMIT_OFFICER",
-                  });
+                    const result = await assignSharedBatchToBranch({
+                      sharedBatch,
+                      beneficiaries: remainingReadyTransactions,
+                      branchId,
+                      branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
+                      assignedByUserId: session.userId,
+                      actorRole: session.role,
+                    });
 
-                  const nextAssignments = [...assignments, result.assignment];
-                  const nextAssignedBeneficiaryIds = [
-                    ...assignedBeneficiaryIds,
-                    ...result.assignment.assignedTransactions.map((beneficiary) => beneficiary.id),
-                  ];
+                    const nextAssignments = [...assignments, result.assignment];
+                    const nextAssignedBeneficiaryIds = [
+                      ...assignedBeneficiaryIds,
+                      ...result.assignment.assignedTransactions.map((beneficiary) => beneficiary.id),
+                    ];
 
-                  saveAssignment(result.assignment);
-                  saveSharedBatch(result.sharedBatch);
+                    await saveAssignment(result.assignment);
+                    await saveSharedBatch(result.sharedBatch);
 
-                  setAssignment(result.assignment);
-                  setAssignments(nextAssignments);
-                  setAssignedBeneficiaryIds(nextAssignedBeneficiaryIds);
-                  setIsAssignmentFinalized(true);
-                  setSharedBatch(result.sharedBatch);
-                  setValidationSummary((current) => current ? { ...current, batchStatus: "ASSIGNED" } : current);
-                  setIsAssignmentConfirmed(true);
-                }}
-                sharedBatch={sharedBatch}
-              />
+                    setAssignment(result.assignment);
+                    setAssignments(nextAssignments);
+                    setAssignedBeneficiaryIds(nextAssignedBeneficiaryIds);
+                    setIsAssignmentFinalized(true);
+                    setSharedBatch(result.sharedBatch);
+                    setValidationSummary((current) => current ? { ...current, batchStatus: "ASSIGNED" } : current);
+                    setIsAssignmentConfirmed(true);
+                  }}
+                  sharedBatch={sharedBatch}
+                />
+              ) : (
+                // AUTHENTICATION.md Section 7: Assignment is Operations-Manager-only (DEC-014).
+                // A Direct Remit Officer reaching this page after upload sees a status note, not
+                // an actionable control they're not authorized to submit.
+                <div style={{ backgroundColor: colors.blue50, border: "1px solid #BFDBFE", borderRadius: radius.sm, color: colors.blue700, fontSize: typography.small, padding: spacing.md }}>
+                  This batch is ready for assignment. An Operations Manager will assign it to a branch via{" "}
+                  <Link style={{ color: colors.blue700, fontWeight: 600 }} to="/reos/shared-batches/assignment">
+                    Branch Assignment
+                  </Link>
+                  .
+                </div>
+              )}
               {isAssignmentFinalized ? (
                 <AssignmentSummary
                   assignments={assignments}
@@ -244,16 +394,42 @@ export function SharedBatchUploadPage() {
           ) : null}
         </>
       ) : null}
+      {importRecord ? (
+        <div style={{ display: "grid", gap: spacing.sm }}>
+          <div style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, color: "#1D4ED8", padding: 16 }}>
+            Recorded in Import Intelligence. This import will still be here after a reload -{" "}
+            <Link style={{ color: "#1D4ED8", fontWeight: 600 }} to="/reos/import-intelligence">
+              view Import Intelligence
+            </Link>
+            .
+          </div>
+          <ImportRecordSummary batch={importRecord} coverageImpact={importCoverageImpact ?? undefined} />
+        </div>
+      ) : null}
+      {importIntelligenceError ? (
+        <div style={{ backgroundColor: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, color: "#92400E", padding: 16 }}>
+          Import Intelligence: {importIntelligenceError} The live Assignment workflow is unaffected.
+        </div>
+      ) : null}
       <ConfirmUploadDialog
         canConfirm={canConfirm}
         onCancel={() => setShowConfirmDialog(false)}
-        onConfirm={() => {
-          setShowConfirmDialog(false);
-          setValidationSummary((current) => current ? { ...current, batchStatus: "READY_FOR_ASSIGNMENT", processingMode: "Process Valid Transactions Only" } : current);
-          setIsConfirmed(true);
-        }}
+        onConfirm={handleConfirmUpload}
         open={showConfirmDialog}
         summary={{ batchReference: validationSummary?.batchReference ?? "Uploaded Batch", fileName: selectedFileName ?? "direct-remit-batch.xlsx", readyForAssignment: validationSummary?.readyForAssignment ?? false }}
+      />
+      <DuplicateImportDialog
+        matches={duplicateMatches}
+        onCancel={() => setShowDuplicateDialog(false)}
+        onMerge={() => {
+          const existingBatchId = duplicateMatches[0]?.id;
+          void finalizeConfirm(existingBatchId ? { type: "MERGE", existingBatchId } : undefined);
+        }}
+        onReplace={() => {
+          const existingBatchId = duplicateMatches[0]?.id;
+          void finalizeConfirm(existingBatchId ? { type: "REPLACE", existingBatchId } : undefined);
+        }}
+        open={showDuplicateDialog}
       />
     </PageContainer>
   );

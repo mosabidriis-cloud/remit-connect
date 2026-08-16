@@ -2,6 +2,8 @@ import type {
   BranchProcessingQueueStatus,
   BranchProcessingStatus,
 } from "../services/branchProcessingQueueService";
+import type { BranchHealth } from "./dashboard";
+import type { PayoutAccountStatus } from "./liquidity";
 import type { ProofOfPaymentFileStatus } from "./proofOfPayment";
 import type { SharedBatchAssignmentStatus, SharedBatchLifecycleStatus } from "./sharedBatch";
 import type { ReosUserRole } from "./user";
@@ -23,9 +25,10 @@ import type { ReosUserRole } from "./user";
  * 4. Nulls mean "not recorded" - never zero, never false.
  * 5. One declared grain per model.
  *
- * Fields blocked by open decisions (D-5 audit trail, D-6 processing timestamps and
- * actor attribution, D-7 branch registry) are deliberately omitted rather than
- * declared as permanently-null - see REPORTING_PROJECTION_LAYER.md Section 4.6.
+ * Fields blocked by open decisions still omitted (D-5 audit trail, D-7 branch registry)
+ * rather than declared as permanently-null - see REPORTING_PROJECTION_LAYER.md Section
+ * 4.6. D-6 (processing timestamps and actor attribution) is unblocked: BranchReportProjection
+ * and ProcessingReportProjection now carry the fields Section 4.6 pre-designed for it.
  */
 
 /**
@@ -99,7 +102,7 @@ export interface BatchReportProjection extends Record<string, unknown> {
  *
  * Carries no usdValue, revenue or liquidity field: REPORTING_STANDARDS.md places
  * financial metrics out of scope, and BranchPerformanceRow already violates that
- * (TECH_DEBT.md). Carries no processing-speed field either - blocked by D-6.
+ * (TECH_DEBT.md).
  */
 export interface BranchReportProjection extends Record<string, unknown> {
   readonly branchId: string;
@@ -125,6 +128,13 @@ export interface BranchReportProjection extends Record<string, unknown> {
   readonly branchProcessingStatus: BranchProcessingStatus;
 
   readonly proofImageCount: number;
+
+  /**
+   * Average of this branch's completed transactions' processingMinutes (Decision D-6,
+   * unblocked). Null when the branch has no completed transaction with both a startedAt
+   * and a completedAt - not the same as zero.
+   */
+  readonly averageProcessingMinutes: number | null;
 
   readonly projectedAt: string;
 }
@@ -160,6 +170,19 @@ export interface ProcessingReportProjection extends Record<string, unknown> {
 
   readonly queueStatus: BranchProcessingQueueStatus;
 
+  /**
+   * Timestamps and actor attribution (Decision D-6, unblocked). startedAt is set once,
+   * on the first transition into IN_PROGRESS - resuming from ON_HOLD does not reset it.
+   * processingMinutes is null unless both startedAt and completedAt are present; it is
+   * not computed for RETURNED transactions, which have no completion.
+   */
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly completedByUserId: string | null;
+  readonly returnedAt: string | null;
+  readonly returnedByUserId: string | null;
+  readonly processingMinutes: number | null;
+
   readonly returnReasonId: string | null;
   readonly returnReasonCode: string | null;
   readonly returnReasonName: string | null;
@@ -170,6 +193,83 @@ export interface ProcessingReportProjection extends Record<string, unknown> {
 
   readonly manualReviewRequired: boolean;
   readonly manualReviewReason: string | null;
+
+  readonly projectedAt: string;
+}
+
+/**
+ * Grain: one payout account (Liquidity Management, LIQUIDITY_MANAGEMENT.md Section 6-7).
+ *
+ * reservedBalance/availableBalance are computed here from
+ * branchProcessingQueueService.getReservedAmountForAccount - the same function
+ * startBranchProcessingQueueItem itself calls for its own sufficiency check (Section
+ * 7.2). This layer does not recompute the reservation logic; it calls the one place that
+ * owns it.
+ */
+export interface LiquidityAccountProjection extends Record<string, unknown> {
+  readonly accountId: string;
+  readonly branchId: string;
+  readonly branchName: string | null;
+
+  readonly bank: string;
+  readonly accountNumber: string;
+  readonly currency: string;
+
+  readonly currentBalance: number;
+  readonly reservedBalance: number;
+  readonly availableBalance: number;
+  readonly minimumThreshold: number;
+
+  readonly status: PayoutAccountStatus;
+  readonly health: BranchHealth;
+
+  readonly lastUpdatedAt: string;
+  readonly lastUpdatedByUserId: string;
+
+  readonly projectedAt: string;
+}
+
+/**
+ * Grain: one branch's liquidity position (Liquidity Management).
+ *
+ * Sums only ACTIVE accounts - a disabled account's balance is visible on
+ * LiquidityAccountProjection but does not count toward branch totals, matching
+ * LIQUIDITY_MANAGEMENT.md Section 7.4 ("disabling is not deletion").
+ */
+export interface LiquidityBranchProjection extends Record<string, unknown> {
+  readonly branchId: string;
+  readonly branchName: string;
+
+  readonly accountCount: number;
+  readonly totalLiquidity: number;
+  readonly reservedLiquidity: number;
+  readonly availableLiquidity: number;
+
+  /** Sum of amounts for ASSIGNED queue items - work with no account committed yet. */
+  readonly pendingProcessing: number;
+  /** Sum of amounts for queue items COMPLETED today (Sprint 17 M4 / Decision D-6 data). */
+  readonly consumptionToday: number;
+  /** Sum of FundingEvent.totalAmount for events recorded today. */
+  readonly fundingToday: number;
+
+  readonly health: BranchHealth;
+
+  readonly projectedAt: string;
+}
+
+/** Grain: one funding event (Liquidity Management, LIQUIDITY_MANAGEMENT.md Section 7.3). */
+export interface FundingEventProjection extends Record<string, unknown> {
+  readonly fundingEventId: string;
+  readonly branchId: string;
+  readonly branchName: string | null;
+
+  readonly accountCount: number;
+  readonly totalAmount: number;
+  readonly reference: string | null;
+  readonly notes: string | null;
+
+  readonly updatedByUserId: string;
+  readonly updatedAt: string;
 
   readonly projectedAt: string;
 }

@@ -18,14 +18,18 @@ export function UserListPage() {
     <PageContainer>
       <PageHeader
         actions={
-          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white" type="button" onClick={() => navigate("create")}>
+          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white" type="button" onClick={() => navigate("/reos/administration/users/create")}>
             Create User
           </button>
         }
         description="Manage internal REOS users."
         title="User Management"
       />
-      <UserTable users={users} onEditUser={(userId) => navigate(userId + "/edit")} onViewUser={(userId) => navigate(userId)} />
+      <UserTable
+        users={users}
+        onEditUser={(userId) => navigate(`/reos/administration/users/${userId}/edit`)}
+        onViewUser={(userId) => navigate(`/reos/administration/users/${userId}`)}
+      />
     </PageContainer>
   );
 }

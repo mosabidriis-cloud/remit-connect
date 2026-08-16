@@ -31,14 +31,17 @@ import type {
  * every dashboard component renders exactly as before - no widget, card, chart or style
  * was altered. Only where the numbers come from changed.
  *
- * Two categories of value are deliberately not produced here:
+ * One category of value is deliberately not produced here:
  * - Financial metrics (USD value, revenue). REPORTING_STANDARDS.md places them out of
  *   scope, and the projection layer carries no aggregate amounts by design. The fields
  *   remain in the view model at 0 because removing them is Decision D-9 and would require
  *   changing components, which is out of this milestone's scope.
- * - Duration metrics (processing speed). Nothing in REOS records a completion timestamp
- *   (Decision D-6), so these stay null and render as "No data" - the same value they
- *   resolved to before, for the same reason.
+ *
+ * Duration metrics (processing speed, Decision D-6) are no longer blocked: Branch
+ * Processing now records startedAt/completedAt, and reportingProjectionService computes
+ * processingMinutes per transaction and averageProcessingMinutes per branch. This service
+ * only averages what the projection layer already computed - see getAverageProcessingMinutes.
+ * Still null - not zero - wherever nothing has completed yet.
  */
 
 const delayedPayoutMinutes = 120;
@@ -75,7 +78,7 @@ export function buildOperationsDashboard(
     (batch) => batch.assignmentStatus === "UNASSIGNED" || !batch.assignedBranchId,
   );
 
-  const averageProcessingTime = getAverageProcessingMinutes();
+  const averageProcessingTime = getAverageProcessingMinutes(processing);
   const readyForDownload = countLifecycle(batches, "READY_FOR_DOWNLOAD");
   const downloadedBatches = countLifecycle(batches, "DOWNLOADED");
   const branchPerformance = buildBranchPerformance(branches, processing);
@@ -219,7 +222,7 @@ function buildBranchPerformance(
       ).length;
       const workload = branch.queueRemaining;
       const returns = branch.queueReturned;
-      const speed = getAverageProcessingMinutes();
+      const speed = branch.averageProcessingMinutes;
 
       return {
         branchId: branch.branchId,
@@ -432,12 +435,22 @@ function getDelayedPayoutCount(processing: readonly ProcessingReportProjection[]
 }
 
 /**
- * Always null: no completion timestamp is recorded anywhere in the live workflow
- * (Decision D-6), so an average processing time cannot be derived. It resolved to the
- * same "No data" before this change, because the only field it read was never populated.
+ * Enterprise-wide average processing time (Decision D-6, unblocked). processingMinutes
+ * is already computed per transaction by reportingProjectionService, called here rather
+ * than recomputed - this function only averages what the projection layer supplies.
+ * Null - not zero - when nothing is complete yet, same "No data" the dashboard already
+ * renders for a null value.
  */
-function getAverageProcessingMinutes(): number | null {
-  return null;
+function getAverageProcessingMinutes(processing: readonly ProcessingReportProjection[]): number | null {
+  const durations = processing
+    .map((transaction) => transaction.processingMinutes)
+    .filter((minutes): minutes is number => minutes !== null);
+
+  if (durations.length === 0) {
+    return null;
+  }
+
+  return Math.round(durations.reduce((total, minutes) => total + minutes, 0) / durations.length);
 }
 
 function getAgeMinutes(value: string, now: Date): number {

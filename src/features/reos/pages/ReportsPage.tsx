@@ -6,6 +6,7 @@ import { ReportFilters } from "../components/reports/ReportFilters";
 import { ReportHeader } from "../components/reports/ReportHeader";
 import { ReportSummary } from "../components/reports/ReportSummary";
 import { ReportTable } from "../components/reports/ReportTable";
+import { useReosSession } from "../layout/reosAuthContext";
 import { reportService } from "../services/reportService";
 import type { ReportFilter, ReportMetric, ReportResult, ReportRow } from "../types/report";
 import type { ProjectionScope } from "../types/reportingProjection";
@@ -21,21 +22,8 @@ import type { ProjectionScope } from "../types/reportingProjection";
  * navigated here with state, so every report rendered permanently empty for a real user.
  */
 
-/**
- * REOS has no current-user context yet, so the acting user is fixed here - the same
- * approach ProofDownloadPage already takes for its actor. Reports are an Operations
- * Manager capability (BUSINESS_RULES.md) and that role has enterprise-wide visibility,
- * which is the correct scope for this page. Recorded in TECH_DEBT.md: when a real session
- * actor exists, this constant is what it replaces, and Branch Officer scoping is already
- * enforced by the projection layer for whatever actor it is given.
- */
-const reportsActor: ProjectionScope = {
-  actorUserId: "OPERATIONS_MANAGER",
-  actorRole: "OPERATIONS_MANAGER",
-  branchId: null,
-};
-
 export function ReportsPage() {
+  const { session } = useReosSession();
   const definitions = useMemo(() => reportService.getDefinitions(), []);
   const firstDefinition = definitions[0];
   const [filters, setFilters] = useState<ReportFilter>({
@@ -56,41 +44,52 @@ export function ReportsPage() {
   );
 
   useEffect(() => {
-    if (!filtersAreValid) {
-      setResult(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
-    setLoading(true);
-    setError(null);
+    (async () => {
+      // Deferred past the current synchronous effect tick on every path (including the
+      // early-exit below) so no setState call here ever runs synchronously within the
+      // effect body itself.
+      await Promise.resolve();
 
-    reportService
-      .generateReport(reportsActor, filters)
-      .then((generated) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (!filtersAreValid || !session) {
+        setResult(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      const reportsActor: ProjectionScope = { actorUserId: session.userId, actorRole: session.role, branchId: session.branchId };
+
+      try {
+        const generated = await reportService.generateReport(reportsActor, filters);
+
         if (!cancelled) {
           setResult(generated);
         }
-      })
-      .catch((cause: unknown) => {
+      } catch (cause) {
         if (!cancelled) {
           setResult(null);
           setError(cause instanceof Error ? cause.message : "The report could not be generated.");
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [filters, filtersAreValid]);
+  }, [filters, filtersAreValid, session]);
 
   return (
     <PageContainer>

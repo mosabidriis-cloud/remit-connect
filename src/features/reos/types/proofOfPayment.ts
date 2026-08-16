@@ -9,6 +9,9 @@ export interface ProofOfPayment {
   fileName: string;
   fileType: string;
   fileSize: number;
+  /** Storage path within the `proof-of-payment` bucket - the durable reference. */
+  storagePath: string;
+  /** A short-lived signed URL, regenerated on every read. Never persisted. */
   previewUrl: string;
   uploadedByUserId: string;
   uploadedAt: string;

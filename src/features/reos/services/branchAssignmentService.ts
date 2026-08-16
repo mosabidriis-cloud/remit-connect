@@ -1,4 +1,5 @@
 import { createAssignment } from "./assignmentService";
+import { recordAuditEvent } from "./auditService";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type {
@@ -36,9 +37,9 @@ export interface ReassignSharedBatchResult {
   audit: SharedBatchReassignmentAudit;
 }
 
-export function assignSharedBatchToBranch(input: AssignSharedBatchInput): AssignSharedBatchResult {
-  if (input.actorRole !== "DIRECT_REMIT_OFFICER") {
-    throw new Error("Only the Direct Remit Officer may assign an unassigned Shared Batch.");
+export async function assignSharedBatchToBranch(input: AssignSharedBatchInput): Promise<AssignSharedBatchResult> {
+  if (input.actorRole !== "OPERATIONS_MANAGER") {
+    throw new Error("Only the Operations Manager may assign an unassigned Shared Batch.");
   }
 
   if (input.sharedBatch.assignmentStatus === "ASSIGNED" || input.sharedBatch.isLocked) {
@@ -54,6 +55,16 @@ export function assignSharedBatchToBranch(input: AssignSharedBatchInput): Assign
     branchName: input.branchName,
     assignedBy: input.assignedByUserId,
     assignedAt,
+  });
+
+  await recordAuditEvent({
+    actorUserId: input.assignedByUserId,
+    action: "BATCH_ASSIGNED",
+    entityType: "ASSIGNMENT",
+    entityId: assignment.id,
+    branchId: input.branchId,
+    details: `Assigned Shared Batch ${input.sharedBatch.reference} to ${input.branchName}.`,
+    performedAt: assignedAt,
   });
 
   return {
@@ -72,7 +83,7 @@ export function assignSharedBatchToBranch(input: AssignSharedBatchInput): Assign
   };
 }
 
-export function reassignSharedBatch(input: ReassignSharedBatchInput): ReassignSharedBatchResult {
+export async function reassignSharedBatch(input: ReassignSharedBatchInput): Promise<ReassignSharedBatchResult> {
   if (input.actorRole !== "OPERATIONS_MANAGER") {
     throw new Error("Only the Operations Manager may reassign a Shared Batch.");
   }
@@ -94,6 +105,16 @@ export function reassignSharedBatch(input: ReassignSharedBatchInput): ReassignSh
     assignedBranchName: input.newBranchName,
     assignedAt: reassignedAt,
   };
+
+  await recordAuditEvent({
+    actorUserId: input.reassignedByUserId,
+    action: "BATCH_REASSIGNED",
+    entityType: "ASSIGNMENT",
+    entityId: assignment.id,
+    branchId: input.newBranchId,
+    details: `Reassigned Shared Batch ${input.sharedBatch.reference} from ${previousBranchId} to ${input.newBranchName}: ${input.reason}.`,
+    performedAt: reassignedAt,
+  });
 
   return {
     sharedBatch: {

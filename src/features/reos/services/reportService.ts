@@ -1,11 +1,16 @@
 import { buildOperationsDashboard } from "./dashboardService";
+import { buildLiquidityDashboard } from "./liquidityDashboardService";
 import {
   projectBatches,
   projectBranches,
+  projectFundingEvents,
+  projectLiquidityAccounts,
+  projectLiquidityBranches,
   projectProcessing,
   projectProofs,
 } from "./reportingProjectionService";
 import type { OperationsDashboard, OperationsDashboardRole } from "../types/dashboard";
+import type { LiquidityDashboard } from "../types/liquidityDashboard";
 import type {
   ReportDefinition,
   ReportFilter,
@@ -17,6 +22,9 @@ import type {
 import type {
   BatchReportProjection,
   BranchReportProjection,
+  FundingEventProjection,
+  LiquidityAccountProjection,
+  LiquidityBranchProjection,
   ProcessingReportProjection,
   ProjectionScope,
   ProofReportProjection,
@@ -206,10 +214,117 @@ const performanceReportDefinitions: ReportDefinition[] = [
   },
 ];
 
+/**
+ * Liquidity Management report definitions (LIQUIDITY_MANAGEMENT.md Section 11). All six
+ * are narrowed variants of two grains - one branch, one account - the same "narrowed
+ * variant of the same projection" pattern SHARED_BATCHES/READY_FOR_DOWNLOAD_BATCHES/
+ * DOWNLOADED_BATCHES already established. Funding History is its own grain (one event).
+ */
+const liquidityReportDefinitions: ReportDefinition[] = [
+  {
+    id: "liquidity-branch-liquidity",
+    name: "Branch Liquidity",
+    category: "LIQUIDITY",
+    type: "BRANCH_LIQUIDITY",
+    format: "TABLE",
+    description: "How much can each branch pay out right now?",
+    columns: [
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "accountCount", title: "Accounts", sortable: true },
+      { key: "totalLiquidity", title: "Total Liquidity", sortable: true },
+      { key: "reservedLiquidity", title: "Reserved", sortable: true },
+      { key: "availableLiquidity", title: "Available", sortable: true },
+      { key: "health", title: "Health", sortable: true },
+    ],
+  },
+  {
+    id: "liquidity-daily-consumption",
+    name: "Daily Consumption",
+    category: "LIQUIDITY",
+    type: "DAILY_CONSUMPTION",
+    format: "TABLE",
+    description: "How much liquidity has each branch consumed and received today?",
+    columns: [
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "consumptionToday", title: "Consumption Today", sortable: true },
+      { key: "fundingToday", title: "Funding Today", sortable: true },
+      { key: "availableLiquidity", title: "Available", sortable: true },
+    ],
+  },
+  {
+    id: "liquidity-account-balances",
+    name: "Account Balances",
+    category: "LIQUIDITY",
+    type: "ACCOUNT_BALANCES",
+    format: "TABLE",
+    description: "What does every payout account hold right now?",
+    columns: [
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "bank", title: "Bank", sortable: true },
+      { key: "accountNumber", title: "Account Number", sortable: true },
+      { key: "currency", title: "Currency", sortable: true },
+      { key: "currentBalance", title: "Current Balance", sortable: true },
+      { key: "reservedBalance", title: "Reserved", sortable: true },
+      { key: "availableBalance", title: "Available", sortable: true },
+      { key: "status", title: "Status", sortable: true },
+      { key: "health", title: "Health", sortable: true },
+    ],
+  },
+  {
+    id: "liquidity-low-balance-accounts",
+    name: "Low Balance Accounts",
+    category: "LIQUIDITY",
+    type: "LOW_BALANCE_ACCOUNTS",
+    format: "TABLE",
+    description: "Which payout accounts are below their minimum threshold?",
+    columns: [
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "bank", title: "Bank", sortable: true },
+      { key: "accountNumber", title: "Account Number", sortable: true },
+      { key: "availableBalance", title: "Available", sortable: true },
+      { key: "minimumThreshold", title: "Minimum Threshold", sortable: true },
+      { key: "health", title: "Health", sortable: true },
+    ],
+  },
+  {
+    id: "liquidity-exceptions",
+    name: "Liquidity Exceptions",
+    category: "LIQUIDITY",
+    type: "LIQUIDITY_EXCEPTIONS",
+    format: "TABLE",
+    description: "Which payout accounts have exhausted their available balance?",
+    columns: [
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "bank", title: "Bank", sortable: true },
+      { key: "accountNumber", title: "Account Number", sortable: true },
+      { key: "currentBalance", title: "Current Balance", sortable: true },
+      { key: "reservedBalance", title: "Reserved", sortable: true },
+      { key: "availableBalance", title: "Available", sortable: true },
+    ],
+  },
+  {
+    id: "liquidity-funding-history",
+    name: "Funding History",
+    category: "LIQUIDITY",
+    type: "FUNDING_HISTORY",
+    format: "TABLE",
+    description: "What funding has been recorded, for which branches, and by whom?",
+    columns: [
+      { key: "updatedAt", title: "Date", sortable: true },
+      { key: "branchName", title: "Branch", sortable: true },
+      { key: "accountCount", title: "Accounts Funded", sortable: true },
+      { key: "totalAmount", title: "Total Amount", sortable: true },
+      { key: "reference", title: "Reference", sortable: true },
+      { key: "updatedByUserId", title: "Recorded By", sortable: true },
+    ],
+  },
+];
+
 export class ReportService {
   private readonly reports: ReportDefinition[] = [
     ...volumeReportDefinitions,
     ...performanceReportDefinitions,
+    ...liquidityReportDefinitions,
   ];
 
   register(definition: ReportDefinition): void {
@@ -265,6 +380,18 @@ export class ReportService {
 
     if (filters.reportType === "PROOF_COMPLETION") {
       return this.generateProofReport(scope, filters);
+    }
+
+    if (isLiquidityBranchReport(filters.reportType)) {
+      return this.generateLiquidityBranchReport(scope, filters);
+    }
+
+    if (isLiquidityAccountReport(filters.reportType)) {
+      return this.generateLiquidityAccountReport(scope, filters);
+    }
+
+    if (filters.reportType === "FUNDING_HISTORY") {
+      return this.generateFundingHistoryReport(scope, filters);
     }
 
     return this.generateProcessingReport(scope, filters);
@@ -409,6 +536,87 @@ export class ReportService {
   }
 
   /**
+   * Business question: how much can each branch pay out right now? Also serves Daily
+   * Consumption, the same grain sorted by today's consumption rather than by branch name -
+   * reusing LiquidityBranchProjection rather than a second branch-liquidity computation.
+   */
+  async generateLiquidityBranchReport(
+    scope: ProjectionScope,
+    filters: ReportFilter,
+  ): Promise<Readonly<ReportResult<LiquidityBranchProjection>>> {
+    const definition = this.resolveDefinition(filters.reportType, "BRANCH_LIQUIDITY");
+    this.assertValidFilters(filters);
+
+    const isConsumptionReport = filters.reportType === "DAILY_CONSUMPTION";
+    const rows = [...(await projectLiquidityBranches(scope))]
+      .filter((row) => matchesFilters({ date: null, branchId: row.branchId, batchReference: null }, filters))
+      .sort(
+        isConsumptionReport
+          ? (first, second) => second.consumptionToday - first.consumptionToday || compareAscending(first.branchId, second.branchId)
+          : (first, second) => compareAscending(first.branchName, second.branchName) || compareAscending(first.branchId, second.branchId),
+      );
+
+    return createReportResult(definition, filters, rows, [
+      { label: "Branches", value: rows.length },
+      { label: "Total Liquidity", value: sumBy(rows, (row) => row.totalLiquidity) },
+      { label: "Available", value: sumBy(rows, (row) => row.availableLiquidity) },
+      { label: "Consumption Today", value: sumBy(rows, (row) => row.consumptionToday) },
+      { label: "Funding Today", value: sumBy(rows, (row) => row.fundingToday) },
+    ]);
+  }
+
+  /**
+   * Business question: what does every payout account hold right now? Also serves Low
+   * Balance Accounts (health != GREEN) and Liquidity Exceptions (health == RED) - the same
+   * grain, narrowed, exactly as COMPLETED_TRANSACTIONS/RETURNED_TRANSACTIONS narrow
+   * TRANSACTIONS.
+   */
+  async generateLiquidityAccountReport(
+    scope: ProjectionScope,
+    filters: ReportFilter,
+  ): Promise<Readonly<ReportResult<LiquidityAccountProjection>>> {
+    const definition = this.resolveDefinition(filters.reportType, "ACCOUNT_BALANCES");
+    this.assertValidFilters(filters);
+
+    const rows = [...(await projectLiquidityAccounts(scope))]
+      .filter((row) => matchesLiquidityHealthFilter(row.health, filters.reportType))
+      .filter((row) => matchesFilters({ date: null, branchId: row.branchId, batchReference: null }, filters))
+      .sort(
+        (first, second) =>
+          compareAscending(first.branchName ?? "", second.branchName ?? "") ||
+          compareAscending(first.accountId, second.accountId),
+      );
+
+    return createReportResult(definition, filters, rows, [
+      { label: "Accounts", value: rows.length },
+      { label: "Total Balance", value: sumBy(rows, (row) => row.currentBalance) },
+      { label: "Available", value: sumBy(rows, (row) => row.availableBalance) },
+      { label: "Below Threshold", value: countBy(rows, (row) => row.health !== "GREEN") },
+    ]);
+  }
+
+  /** Business question: what funding has been recorded, for which branches, and by whom? */
+  async generateFundingHistoryReport(
+    scope: ProjectionScope,
+    filters: ReportFilter,
+  ): Promise<Readonly<ReportResult<FundingEventProjection>>> {
+    const definition = this.resolveDefinition(filters.reportType, "FUNDING_HISTORY");
+    this.assertValidFilters(filters);
+
+    const rows = [...(await projectFundingEvents(scope))]
+      .filter((row) => matchesFilters({ date: row.updatedAt, branchId: row.branchId, batchReference: null }, filters))
+      .sort(
+        (first, second) =>
+          compareDescending(first.updatedAt, second.updatedAt) || compareAscending(first.fundingEventId, second.fundingEventId),
+      );
+
+    return createReportResult(definition, filters, rows, [
+      { label: "Funding Events", value: rows.length },
+      { label: "Total Funded", value: sumBy(rows, (row) => row.totalAmount) },
+    ]);
+  }
+
+  /**
    * Builds the Operations Dashboard from the same projections the reports use
    * (Sprint 16 M4.5).
    *
@@ -446,6 +654,28 @@ export class ReportService {
     );
   }
 
+  /**
+   * Builds the Liquidity Dashboard the same way generateOperationsDashboard builds the
+   * Operations Dashboard - the three Liquidity Management reports gathered here, the view
+   * model owned by liquidityDashboardService. Unfiltered, same reasoning as
+   * generateOperationsDashboard: a dashboard shows everything in the actor's scope.
+   */
+  async generateLiquidityDashboard(scope: ProjectionScope): Promise<LiquidityDashboard> {
+    const filters = createUnfilteredDashboardFilters();
+
+    const [branches, accounts, fundingEvents] = await Promise.all([
+      this.generateLiquidityBranchReport(scope, { ...filters, reportType: "BRANCH_LIQUIDITY" }),
+      this.generateLiquidityAccountReport(scope, { ...filters, reportType: "ACCOUNT_BALANCES" }),
+      this.generateFundingHistoryReport(scope, { ...filters, reportType: "FUNDING_HISTORY" }),
+    ]);
+
+    return buildLiquidityDashboard({
+      branches: branches.rows,
+      accounts: accounts.rows,
+      fundingEvents: fundingEvents.rows,
+    });
+  }
+
   private assertValidFilters(filters: ReportFilter): void {
     if (!this.validateFilters(filters)) {
       throw new Error("The selected date range is invalid.");
@@ -473,6 +703,30 @@ function isBatchReport(reportType: ReportType): boolean {
     reportType === "READY_FOR_DOWNLOAD_BATCHES" ||
     reportType === "DOWNLOADED_BATCHES"
   );
+}
+
+function isLiquidityBranchReport(reportType: ReportType): boolean {
+  return reportType === "BRANCH_LIQUIDITY" || reportType === "DAILY_CONSUMPTION";
+}
+
+function isLiquidityAccountReport(reportType: ReportType): boolean {
+  return reportType === "ACCOUNT_BALANCES" || reportType === "LOW_BALANCE_ACCOUNTS" || reportType === "LIQUIDITY_EXCEPTIONS";
+}
+
+/**
+ * Narrows LiquidityAccountProjection by health, the same "narrowed variant of one
+ * projection" pattern getTransactionReportStatus already applies to queue status.
+ */
+function matchesLiquidityHealthFilter(health: LiquidityAccountProjection["health"], reportType: ReportType): boolean {
+  if (reportType === "LOW_BALANCE_ACCOUNTS") {
+    return health !== "GREEN";
+  }
+
+  if (reportType === "LIQUIDITY_EXCEPTIONS") {
+    return health === "RED";
+  }
+
+  return true;
 }
 
 function getBatchReportLifecycleStatus(reportType: ReportType): SharedBatchLifecycleStatus | null {

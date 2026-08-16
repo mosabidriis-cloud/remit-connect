@@ -1,4 +1,5 @@
 import { read, utils, type WorkSheet } from "xlsx";
+import { parseBankField } from "./sharedBatchService";
 import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
@@ -40,21 +41,18 @@ export type ExcelValidationResult = {
  * alias, so both formats import through one code path - there is no second parser and no
  * per-format branch.
  *
- * `Bank Name` and `Account Number` deliberately have no Direct Remit alias. That export
- * supplies both in a single composite `Bank` column (`"BANK OF KHARTOUM (Acc No: 4734114)"`),
- * and splitting it is the job of the one shared `parseBankField` in Milestone 3 (DEC-012).
- * Mapping the composite column onto `Bank Name` here would put an account number inside a
- * bank name, which is precisely what the frozen rule "Bank field is parsed into bankName
- * and accountNumber" forbids. Until M3 lands, a Direct Remit file therefore still reports
- * these two columns as missing.
+ * `Bank Name` and `Account Number` are deliberately not here (Sprint 17 Milestone 3). The
+ * Direct Remit export supplies both in a single composite `Bank` column
+ * (`"BANK OF KHARTOUM (Acc No: 4734114)"`), sometimes with the bank name displaced into
+ * `Dest Country` instead. Whether that composite column can supply both fields is not a
+ * simple alias lookup, so it is resolved separately below, through the one shared
+ * `parseBankField` (DEC-012) - the only place bank-field parsing happens.
  */
 const columnAliases = {
   "Direct Remit Reference": ["Direct Remit Reference", "Payout Ref. No"],
   "Beneficiary Name": ["Beneficiary Name", "Receiver Name"],
   "Amount": ["Amount", "FC Amount"],
   "Currency": ["Currency", "CCY"],
-  "Bank Name": ["Bank Name"],
-  "Account Number": ["Account Number"],
 } as const satisfies Record<string, readonly string[]>;
 
 type RequiredColumn = keyof typeof columnAliases;
@@ -64,13 +62,15 @@ const requiredColumns = Object.keys(columnAliases) as RequiredColumn[];
 /**
  * Labels that identify a header row (Sprint 17 Milestone 1).
  *
- * Every alias above, plus the Direct Remit columns REOS does not consume as required
- * fields. `Date` is listed so the header is still recognised; capturing it is Milestone 4
- * (DEC-011). `Bank` and `Dest Country` are listed for the same reason - they identify a
- * header row without yet being mapped to a field.
+ * Every alias above, plus the columns Milestone 3 resolves separately (`Bank Name`,
+ * `Account Number`, `Bank`, `Dest Country`) and the column Milestone 4 will capture
+ * (`Date`). Listed here so a header row is recognised regardless of which contract's
+ * columns it carries, independent of how each column is later resolved to a field.
  */
 const headerLabels: readonly string[] = [
   ...Object.values(columnAliases).flat(),
+  "Bank Name",
+  "Account Number",
   "Date",
   "Dest Country",
   "Bank",
@@ -85,7 +85,7 @@ const headerLabels: readonly string[] = [
  */
 const minimumHeaderLabelMatches = 2;
 
-export async function validateExcelUpload(file: File): Promise<ExcelValidationResult> {
+export async function validateExcelUpload(file: File, uploadedByUserId: string): Promise<ExcelValidationResult> {
   if (!file.name.toLowerCase().endsWith(".xlsx")) {
     throw new Error("Only .xlsx files are supported.");
   }
@@ -137,6 +137,55 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
   });
 
   /**
+   * Bank field resolution (Sprint 17 Milestone 3, DEC-012).
+   *
+   * Two column shapes are recognised. `Bank Name` + `Account Number` present together is
+   * the legacy pre-split shape - read directly, nothing to parse. Otherwise, a `Bank`
+   * column is the Direct Remit composite shape, resolved per row through parseBankField;
+   * `Dest Country` supplies the fallback bank name for rows where it is displaced there
+   * (Layout B). A file with neither shape reports both columns missing, exactly as the
+   * legacy-only contract always has.
+   */
+  const bankNameColumnIndex = findSingleColumnIndex(headers, "Bank Name");
+  const accountNumberColumnIndex = findSingleColumnIndex(headers, "Account Number");
+  const bankColumnIndex = findSingleColumnIndex(headers, "Bank");
+  const destCountryColumnIndex = findSingleColumnIndex(headers, "Dest Country");
+
+  /**
+   * Transaction date resolution (Sprint 17 Milestone 4, DEC-011).
+   *
+   * Not a required column - DEC-011 only asks that the date be captured when the export
+   * provides one, not that its absence invalidate a row. A file with no Date column, or a
+   * cell that does not parse as DD/MM/YYYY, leaves transactionDate as "", exactly the
+   * behaviour every file had before this milestone.
+   */
+  const dateColumnIndex = findSingleColumnIndex(headers, "Date");
+  const bankColumns: BankFieldColumns = {
+    bankNameColumnIndex,
+    accountNumberColumnIndex,
+    bankColumnIndex,
+    destCountryColumnIndex,
+  };
+
+  const hasSplitBankColumns = bankNameColumnIndex !== undefined && accountNumberColumnIndex !== undefined;
+  const hasCombinedBankColumn = bankColumnIndex !== undefined;
+
+  if (!hasSplitBankColumns && !hasCombinedBankColumn) {
+    issues.push({
+      id: "header-Bank Name",
+      field: "Bank Name",
+      message: `The required column "Bank Name" was not found in the first worksheet.`,
+      severity: "ERROR",
+    });
+    issues.push({
+      id: "header-Account Number",
+      field: "Account Number",
+      message: `The required column "Account Number" was not found in the first worksheet.`,
+      severity: "ERROR",
+    });
+  }
+
+  /**
    * Everything below the header, minus the noise a paginated report export carries.
    *
    * M1 removed blank spacer rows and the header repeated at each page break. M2 adds
@@ -165,16 +214,14 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
   const seenReferences = new Map<string, number>();
   const beneficiaries: Beneficiary[] = [];
   let duplicateRows = 0;
-  let invalidRecords = 0;
-  let validRecords = 0;
 
   dataRows.forEach(({ row: normalizedRow, rowNumber }, index) => {
     const directRemitReference = getCellValue(normalizedRow, resolvedColumns["Direct Remit Reference"]);
     const beneficiaryName = getCellValue(normalizedRow, resolvedColumns["Beneficiary Name"]);
     const amount = getCellValue(normalizedRow, resolvedColumns["Amount"]);
     const currency = getCellValue(normalizedRow, resolvedColumns["Currency"]);
-    const bankName = getCellValue(normalizedRow, resolvedColumns["Bank Name"]);
-    const accountNumber = getCellValue(normalizedRow, resolvedColumns["Account Number"]);
+    const { bankName, accountNumber } = resolveBankFields(normalizedRow, bankColumns);
+    const transactionDate = parseTransactionDate(getCellValue(normalizedRow, dateColumnIndex));
 
     const referenceKey = stringifyValue(directRemitReference).trim().toLowerCase();
     const referenceSeenCount = seenReferences.get(referenceKey) ?? 0;
@@ -209,7 +256,6 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
     let status: Beneficiary["processingStatusId"] = "READY_FOR_ASSIGNMENT";
 
     if (missingValues.length > 0 || !amountIsValid) {
-      invalidRecords += 1;
       status = "INVALID";
       issues.push({
         id: `row-${index}`,
@@ -219,15 +265,13 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
       });
     } else if (isDuplicate) {
       status = "MANUAL_REVIEW";
-    } else {
-      validRecords += 1;
     }
 
     const normalizedAmount = amountIsValid ? numericAmount : 0;
     beneficiaries.push({
       id: createBeneficiaryId(index),
       directRemitReference: stringifyValue(directRemitReference),
-      transactionDate: "",
+      transactionDate,
       beneficiaryName: stringifyValue(beneficiaryName),
       currency: stringifyValue(currency),
       amount: normalizedAmount,
@@ -248,7 +292,7 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
     });
   });
 
-  const sharedBatch = createSharedBatch(file, beneficiaries, duplicateRows);
+  const sharedBatch = createSharedBatch(file, beneficiaries, duplicateRows, uploadedByUserId);
   const summary = createValidationSummary(sharedBatch, beneficiaries);
 
   return {
@@ -259,13 +303,13 @@ export async function validateExcelUpload(file: File): Promise<ExcelValidationRe
   };
 }
 
-function createSharedBatch(file: File, beneficiaries: Beneficiary[], duplicateRows: number): SharedBatch {
+function createSharedBatch(file: File, beneficiaries: Beneficiary[], duplicateRows: number, uploadedByUserId: string): SharedBatch {
   return {
     id: createBatchId(),
     reference: createBatchReference(file.name),
     fileName: file.name,
     uploadDate: new Date().toISOString(),
-    uploadedByUserId: "local-validation-engine",
+    uploadedByUserId,
     totalBeneficiaries: beneficiaries.length,
     assignedBeneficiaries: 0,
     completedBeneficiaries: 0,
@@ -330,6 +374,62 @@ function findColumnIndex(
 }
 
 /**
+ * Resolves a single column label to an index, or undefined when absent
+ * (Sprint 17 Milestone 3). Used for the bank-field columns, which are not a simple alias
+ * lookup - which columns are even relevant depends on which shape the file uses - so they
+ * are not part of `columnAliases`.
+ */
+function findSingleColumnIndex(
+  headers: Array<string | number | Date | undefined>,
+  label: string,
+): number | undefined {
+  const target = headers.findIndex((header) => normalizeHeader(header) === normalizeHeader(label));
+
+  return target === -1 ? undefined : target;
+}
+
+type BankFieldColumns = {
+  bankNameColumnIndex: number | undefined;
+  accountNumberColumnIndex: number | undefined;
+  bankColumnIndex: number | undefined;
+  destCountryColumnIndex: number | undefined;
+};
+
+/**
+ * Resolves bankName and accountNumber for one row (Sprint 17 Milestone 3, DEC-012).
+ *
+ * Two column shapes, both ending up through the same parser where parsing is actually
+ * needed:
+ * - **Legacy** - Bank Name and Account Number arrive pre-split in two columns. Read
+ *   directly; there is nothing to parse.
+ * - **Direct Remit** - both values arrive in one Bank column
+ *   (`"BANK OF KHARTOUM (Acc No: 4734114)"`), or the Bank column holds a bare account
+ *   number with the bank name displaced into Dest Country. Both variants are handled by
+ *   the single shared `parseBankField` (DEC-012); this function does no parsing of its own,
+ *   it only decides which columns to hand it.
+ */
+function resolveBankFields(
+  row: Array<string | number | Date | undefined>,
+  columns: BankFieldColumns,
+): { bankName: string; accountNumber: string } {
+  if (columns.bankNameColumnIndex !== undefined && columns.accountNumberColumnIndex !== undefined) {
+    return {
+      bankName: stringifyValue(getCellValue(row, columns.bankNameColumnIndex)),
+      accountNumber: stringifyValue(getCellValue(row, columns.accountNumberColumnIndex)),
+    };
+  }
+
+  if (columns.bankColumnIndex !== undefined) {
+    const bankCell = stringifyValue(getCellValue(row, columns.bankColumnIndex));
+    const fallbackBankName = stringifyValue(getCellValue(row, columns.destCountryColumnIndex));
+
+    return parseBankField(bankCell, fallbackBankName);
+  }
+
+  return { bankName: "", accountNumber: "" };
+}
+
+/**
  * A row is a transaction only when it carries a transaction identifier
  * (Sprint 17 Milestone 2, DEC-013).
  *
@@ -378,6 +478,56 @@ function parseAmountValue(value: string | number | Date | undefined): { isValid:
   }
 
   return { isValid: true, amount: parsed };
+}
+
+/**
+ * Parses the export's Date column (Sprint 17 Milestone 4, DEC-011).
+ *
+ * The source format is DD/MM/YYYY. Strictly validated with a round-trip check (so 31/02
+ * does not silently become 03/03) and converted to ISO (YYYY-MM-DD) - the format every
+ * downstream consumer already assumes: reportService/reportingProjectionService compare
+ * transactionDate with plain string ordering (compareDescending), and dashboardService
+ * parses it with `new Date(...)`. Neither works correctly against DD/MM/YYYY text.
+ *
+ * Returns "" - the existing, already-handled value - for an absent column, an empty cell,
+ * or anything that does not parse. This does not invalidate the row; DEC-011 only asks
+ * that the date be captured when present.
+ */
+function parseTransactionDate(value: string | number | Date | undefined): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "" : toIsoDate(value);
+  }
+
+  const raw = stringifyValue(value).trim();
+
+  if (raw.length === 0) {
+    return "";
+  }
+
+  const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+
+  if (!match) {
+    return "";
+  }
+
+  const [, day, month, year] = match;
+  const parsedDay = Number(day);
+  const parsedMonth = Number(month);
+  const parsedDate = new Date(Number(year), parsedMonth - 1, parsedDay);
+
+  const isValidCalendarDate = !Number.isNaN(parsedDate.getTime())
+    && parsedDate.getDate() === parsedDay
+    && parsedDate.getMonth() === parsedMonth - 1;
+
+  return isValidCalendarDate ? toIsoDate(parsedDate) : "";
+}
+
+function toIsoDate(date: Date): string {
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 /**

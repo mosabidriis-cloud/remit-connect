@@ -29,6 +29,11 @@ Only after reading these three, inspect implementation files.
 - PROOF_MANAGEMENT.md - canonical architecture and design reference for the Proof Management module (Sprint 14).
 - REPORTING_ARCHITECTURE.md - canonical architecture and design reference for the Reporting module and dashboards (Sprint 16).
 - REPORTING_PROJECTION_LAYER.md - canonical design for the Reporting Projection Layer, the read-only boundary between operational state and reporting (Sprint 16).
+- LIQUIDITY_MANAGEMENT.md - canonical architecture and design reference for the Liquidity Management module: branch payout accounts, manual funding, live consumption during Branch Processing, and its own dashboard and reports.
+- IMPORT_INTELLIGENCE.md - canonical architecture and design reference for the Import Intelligence ledger: REOS's first real persistence (DEC-016), fingerprinting, duplicate detection, reporting period, and data coverage.
+- AUTHENTICATION.md - canonical architecture and design reference for REOS's authentication and authorization (Production Readiness Phase 1, DEC-018): Supabase Auth, the `profiles` table, the `admin-create-user` Edge Function, and route/branch-level RBAC.
+- OPERATIONAL_PERSISTENCE.md - canonical architecture and design reference for REOS v1.0 Production Readiness Phase 2: migrating the live in-memory operational stores to Supabase, one module at a time. Complete (Milestone 1: Shared Batch/Beneficiary/Assignment, DEC-019; Milestone 2: Branch Processing Queue/Proof Storage, DEC-020; Milestone 3: Liquidity Management, DEC-021).
+- AUDIT_TRAIL.md - canonical architecture and design reference for REOS v1.0 Production Readiness Phase 3: a real, persisted, append-only audit trail for operational actions, closing Decision D-5 (DEC-022).
 - ROADMAP.md - sprint sequencing and completed work.
 - MODULE_STATUS.md - status of every REOS module.
 - TECH_DEBT.md - known technical debt.

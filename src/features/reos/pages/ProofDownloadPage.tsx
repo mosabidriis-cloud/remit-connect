@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { BatchDownloadActions } from "../components/BatchDownloadActions";
 import { BatchDownloadSummary } from "../components/BatchDownloadSummary";
 import { EmptyState } from "../components/common/EmptyState";
@@ -7,6 +7,7 @@ import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { DownloadHistory } from "../components/DownloadHistory";
 import { ProofDownloadPanel } from "../components/ProofDownloadPanel";
+import { useReosSession } from "../layout/reosAuthContext";
 import {
   buildProofDownloadBatchFromSharedBatch,
   downloadIndividualProof,
@@ -19,32 +20,52 @@ import {
 import { getSharedBatch, updateSharedBatchLifecycleStatus } from "../services/sharedBatchStore";
 import type {
   DownloadableProof,
-  ProofDownloadActorRole,
   ProofDownloadBatch,
   ProofDownloadHistoryEntry,
 } from "../types/proofDownload";
 
-type ProofDownloadLocationState = {
-  actorUserId?: string;
-  actorRole?: ProofDownloadActorRole;
-};
-
 export function ProofDownloadPage() {
-  const location = useLocation();
   const { batchId } = useParams();
-  const state = location.state as ProofDownloadLocationState | null;
-  const [batch, setBatch] = useState<ProofDownloadBatch | null>(() => {
-    const sharedBatch = batchId ? getSharedBatch(batchId) : null;
-    return sharedBatch ? buildProofDownloadBatchFromSharedBatch(sharedBatch) : null;
-  });
+  const { session } = useReosSession();
+  const [batch, setBatch] = useState<ProofDownloadBatch | null>(null);
+  const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<ProofDownloadHistoryEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
-  const actorUserId = state?.actorUserId ?? "DIRECT_REMIT_OFFICER";
-  const actorRole = state?.actorRole ?? "DIRECT_REMIT_OFFICER";
+  // Route is RoleGate'd to DIRECT_REMIT_OFFICER/OPERATIONS_MANAGER (AUTHENTICATION.md
+  // Section 6) - BRANCH_OFFICER cannot reach this page, so the narrower
+  // ProofDownloadActorRole is always satisfied here.
+  const actorUserId = session?.userId ?? "";
+  const actorRole = session?.role === "OPERATIONS_MANAGER" ? "OPERATIONS_MANAGER" : "DIRECT_REMIT_OFFICER";
   const actorCanDownload = actorRole === "DIRECT_REMIT_OFFICER";
   const summary = useMemo(() => (batch ? getBatchDownloadSummary(batch) : null), [batch]);
   const downloadableProofs = useMemo(() => (batch ? getDownloadableProofs(batch) : []), [batch]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      // Deferred past the current synchronous effect tick so setLoading(true) below never
+      // runs synchronously within the effect body itself.
+      await Promise.resolve();
+
+      if (!cancelled) {
+        setLoading(true);
+      }
+
+      const sharedBatch = batchId ? await getSharedBatch(batchId) : null;
+      const proofDownloadBatch = sharedBatch ? await buildProofDownloadBatchFromSharedBatch(sharedBatch) : null;
+
+      if (!cancelled) {
+        setBatch(proofDownloadBatch);
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [batchId]);
 
   // Opening Proof Management for a COMPLETED batch performs the approved
   // COMPLETED -> READY_FOR_DOWNLOAD transition (LIFECYCLE.md). Only the Direct Remit
@@ -56,13 +77,26 @@ export function ProofDownloadPage() {
       return;
     }
 
-    try {
-      const readyBatch = markSharedBatchReadyForDownload({ batch, actorUserId, actorRole });
-      updateSharedBatchLifecycleStatus(readyBatch.id, "READY_FOR_DOWNLOAD");
-      setBatch(readyBatch);
-    } catch (caughtError) {
-      setMessage(caughtError instanceof Error ? caughtError.message : "Unable to open the proof download workflow.");
-    }
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const readyBatch = markSharedBatchReadyForDownload({ batch, actorUserId, actorRole });
+        await updateSharedBatchLifecycleStatus(readyBatch.id, "READY_FOR_DOWNLOAD");
+
+        if (!cancelled) {
+          setBatch(readyBatch);
+        }
+      } catch (caughtError) {
+        if (!cancelled) {
+          setMessage(caughtError instanceof Error ? caughtError.message : "Unable to open the proof download workflow.");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [batch, actorCanDownload, actorUserId, actorRole]);
 
   const handleDownloadZip = async () => {
@@ -100,7 +134,7 @@ export function ProofDownloadPage() {
     }
   };
 
-  const handleConfirmDownloaded = () => {
+  const handleConfirmDownloaded = async () => {
     if (!batch) {
       return;
     }
@@ -108,13 +142,13 @@ export function ProofDownloadPage() {
     setMessage(null);
 
     try {
-      const result = markBatchDownloaded({
+      const result = await markBatchDownloaded({
         batch,
         actorUserId,
         actorRole,
       });
 
-      updateSharedBatchLifecycleStatus(result.batch.id, "DOWNLOADED");
+      await updateSharedBatchLifecycleStatus(result.batch.id, "DOWNLOADED");
       setBatch(result.batch);
       setHistory((currentHistory) => [result.history, ...currentHistory]);
       setMessage("Shared Batch marked as DOWNLOADED.");
@@ -122,6 +156,18 @@ export function ProofDownloadPage() {
       setMessage(caughtError instanceof Error ? caughtError.message : "Unable to mark Shared Batch as downloaded.");
     }
   };
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader
+          description="Open a completed Shared Batch to view its download summary."
+          title="Proof Download"
+        />
+        <EmptyState message="Loading..." />
+      </PageContainer>
+    );
+  }
 
   if (!batch || !summary) {
     return (

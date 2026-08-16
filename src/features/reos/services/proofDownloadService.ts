@@ -1,3 +1,4 @@
+import { recordAuditEvent } from "./auditService";
 import { getBranchProcessingQueue, type BranchProcessingQueueStatus } from "./branchProcessingQueueService";
 import { getAssignmentsByBranch } from "./sharedBatchStore";
 import type {
@@ -20,28 +21,31 @@ let crcTable: Uint32Array | null = null;
  * queue state - the read side of the Branch Processing -> Proof Management handoff.
  * Returns null if the Shared Batch has not been assigned to a branch.
  */
-export function buildProofDownloadBatchFromSharedBatch(sharedBatch: SharedBatch): ProofDownloadBatch | null {
+export async function buildProofDownloadBatchFromSharedBatch(sharedBatch: SharedBatch): Promise<ProofDownloadBatch | null> {
   if (!sharedBatch.assignedBranchId) {
     return null;
   }
 
+  const branchAssignments = await getAssignmentsByBranch(sharedBatch.assignedBranchId);
   const assignmentIds = new Set(
-    getAssignmentsByBranch(sharedBatch.assignedBranchId)
+    branchAssignments
       .filter((assignment) => assignment.sharedBatchId === sharedBatch.id)
       .map((assignment) => assignment.id),
   );
 
-  const transactions: CreditToAccountTransaction[] = getBranchProcessingQueue(sharedBatch.assignedBranchId)
+  const branchQueueItems = await getBranchProcessingQueue(sharedBatch.assignedBranchId);
+
+  const transactions: CreditToAccountTransaction[] = branchQueueItems
     .filter((item) => assignmentIds.has(item.assignmentId))
     .map((item) => ({
       id: item.id,
       beneficiary: item.beneficiary,
       status: toTransactionStatus(item.status),
       proofs: item.proofs,
-      completedByUserId: null,
-      completedAt: null,
-      returnedByUserId: null,
-      returnedAt: null,
+      completedByUserId: item.completedByUserId,
+      completedAt: item.completedAt,
+      returnedByUserId: item.returnedByUserId,
+      returnedAt: item.returnedAt,
       returnReason: item.returnReason,
       returnComment: item.returnComment,
     }));
@@ -142,12 +146,18 @@ export async function downloadProofZip(request: ProofDownloadRequest): Promise<P
   const zipBlob = createZipBlob(zipEntries);
   triggerDownload(zipBlob, `${sanitizeFileName(request.batch.sharedBatchReference)}-proofs.zip`);
 
-  return createHistoryEntry(
-    request.batch.id,
-    "ZIP_DOWNLOADED",
-    request.actorUserId,
-    `Downloaded ${proofFiles.length} proof image(s) as ZIP.`,
-  );
+  const details = `Downloaded ${proofFiles.length} proof image(s) as ZIP.`;
+
+  await recordAuditEvent({
+    actorUserId: request.actorUserId,
+    action: "PROOF_ZIP_DOWNLOADED",
+    entityType: "SHARED_BATCH",
+    entityId: request.batch.id,
+    branchId: request.batch.assignedBranchId,
+    details,
+  });
+
+  return createHistoryEntry(request.batch.id, "ZIP_DOWNLOADED", request.actorUserId, details);
 }
 
 export async function downloadIndividualProof(
@@ -164,18 +174,24 @@ export async function downloadIndividualProof(
   const proofBlob = new Blob([await fetchProofBytes(proof)], { type: proof.fileType });
   triggerDownload(proofBlob, proof.fileName);
 
-  return createHistoryEntry(
-    request.batch.id,
-    "PROOF_DOWNLOADED",
-    request.actorUserId,
-    `Downloaded proof ${proof.fileName}.`,
-  );
+  const details = `Downloaded proof ${proof.fileName}.`;
+
+  await recordAuditEvent({
+    actorUserId: request.actorUserId,
+    action: "PROOF_DOWNLOADED",
+    entityType: "PROOF",
+    entityId: proof.id,
+    branchId: request.batch.assignedBranchId,
+    details,
+  });
+
+  return createHistoryEntry(request.batch.id, "PROOF_DOWNLOADED", request.actorUserId, details);
 }
 
-export function markBatchDownloaded(input: MarkBatchDownloadedInput): {
+export async function markBatchDownloaded(input: MarkBatchDownloadedInput): Promise<{
   batch: ProofDownloadBatch;
   history: ProofDownloadHistoryEntry;
-} {
+}> {
   assertDirectRemitOfficer(input.actorRole);
 
   if (input.batch.lifecycleStatus !== "READY_FOR_DOWNLOAD") {
@@ -183,6 +199,17 @@ export function markBatchDownloaded(input: MarkBatchDownloadedInput): {
   }
 
   const downloadedAt = new Date().toISOString();
+  const details = "Marked Shared Batch as DOWNLOADED.";
+
+  await recordAuditEvent({
+    actorUserId: input.actorUserId,
+    action: "BATCH_MARKED_DOWNLOADED",
+    entityType: "SHARED_BATCH",
+    entityId: input.batch.id,
+    branchId: input.batch.assignedBranchId,
+    details,
+    performedAt: downloadedAt,
+  });
 
   return {
     batch: {
@@ -191,13 +218,7 @@ export function markBatchDownloaded(input: MarkBatchDownloadedInput): {
       downloadedByUserId: input.actorUserId,
       downloadedAt,
     },
-    history: createHistoryEntry(
-      input.batch.id,
-      "BATCH_MARKED_DOWNLOADED",
-      input.actorUserId,
-      "Marked Shared Batch as DOWNLOADED.",
-      downloadedAt,
-    ),
+    history: createHistoryEntry(input.batch.id, "BATCH_MARKED_DOWNLOADED", input.actorUserId, details, downloadedAt),
   };
 }
 

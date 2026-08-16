@@ -1,14 +1,6 @@
 import type { FormEvent } from "react";
-import type { ReosUserRole } from "../types/user";
 
 export type BranchAssignmentFormValues = {
-  sharedBatchId: string;
-  sharedBatchReference: string;
-  fileName: string;
-  uploadedByUserId: string;
-  totalBeneficiaries: number;
-  actorRole: ReosUserRole;
-  actorUserId: string;
   branchId: string;
   reassignmentReason: string;
 };
@@ -23,13 +15,6 @@ export function BranchAssignmentForm({ onSubmit }: BranchAssignmentFormProps) {
     const formData = new FormData(event.currentTarget);
 
     onSubmit({
-      sharedBatchId: String(formData.get("sharedBatchId") ?? ""),
-      sharedBatchReference: String(formData.get("sharedBatchReference") ?? ""),
-      fileName: String(formData.get("fileName") ?? ""),
-      uploadedByUserId: String(formData.get("uploadedByUserId") ?? ""),
-      totalBeneficiaries: Number(formData.get("totalBeneficiaries") ?? 0),
-      actorRole: String(formData.get("actorRole")) as ReosUserRole,
-      actorUserId: String(formData.get("actorUserId") ?? ""),
       branchId: String(formData.get("branchId") ?? ""),
       reassignmentReason: String(formData.get("reassignmentReason") ?? ""),
     });
@@ -38,21 +23,7 @@ export function BranchAssignmentForm({ onSubmit }: BranchAssignmentFormProps) {
   return (
     <form className="grid gap-4 rounded border border-slate-200 bg-white p-6" onSubmit={handleSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Shared Batch ID" name="sharedBatchId" required />
-        <Field label="Shared Batch Reference" name="sharedBatchReference" required />
-        <Field label="File Name" name="fileName" required />
-        <Field label="Uploaded By User ID" name="uploadedByUserId" required />
-        <Field label="Total Beneficiaries" min={1} name="totalBeneficiaries" required type="number" />
-        <label className="grid gap-1 text-sm font-medium text-slate-700">
-          Actor Role
-          <select className="rounded border border-slate-300 px-3 py-2" name="actorRole">
-            <option value="DIRECT_REMIT_OFFICER">Direct Remit Officer</option>
-            <option value="OPERATIONS_MANAGER">Operations Manager</option>
-            <option value="BRANCH_OFFICER">Branch Officer</option>
-          </select>
-        </label>
-        <Field label="Actor User ID" name="actorUserId" required />
-        <Field label="Assigned Branch ID" name="branchId" required />
+        <Field label="Destination Branch ID" name="branchId" required />
       </div>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Reassignment Reason

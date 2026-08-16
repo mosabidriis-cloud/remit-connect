@@ -25,13 +25,53 @@ const requiredColumns = [
   "Bank",
 ];
 
-export function parseBankField(bankField: string): BankParseResult {
+/**
+ * The single implementation of the frozen rule "Bank field is parsed into bankName and
+ * accountNumber" (BUSINESS_RULES.md). Every import path uses this function and only this
+ * function - DECISIONS.md DEC-012.
+ *
+ * Three input shapes are supported, tried in order:
+ *
+ * 1. **Labelled account** - `"BANK OF KHARTOUM (Acc No: 4734114)"`. The Direct Remit
+ *    export's primary layout, where one cell carries both values.
+ * 2. **Bare account number** - `"3686824"`. The export's second layout, where the account
+ *    number stands alone in the Bank column and the bank name arrives in a different
+ *    column; the caller supplies it as `fallbackBankName`.
+ * 3. **Trailing account token** - `"Bank of Khartoum 1002003001"`. The long-standing
+ *    behaviour, unchanged.
+ *
+ * Anything else is treated as a bank name with no account number, exactly as before.
+ *
+ * Bank names are returned **exactly as received** apart from trimming surrounding
+ * whitespace. No normalization, mapping or correction of any kind - DEC-010.
+ */
+export function parseBankField(bankField: string, fallbackBankName = ""): BankParseResult {
   const normalizedBankField = bankField.trim();
+  const fallback = fallbackBankName.trim();
+
+  const labelledAccount = normalizedBankField.match(/^(.*?)\(\s*acc\.?\s*no\.?\s*:?\s*([^)]*?)\s*\)\s*$/i);
+
+  if (labelledAccount) {
+    const parsedBankName = labelledAccount[1].trim();
+
+    return {
+      bankName: parsedBankName.length > 0 ? parsedBankName : fallback,
+      accountNumber: labelledAccount[2].trim(),
+    };
+  }
+
+  if (normalizedBankField.length > 0 && /^[0-9]+$/.test(normalizedBankField)) {
+    return {
+      bankName: fallback,
+      accountNumber: normalizedBankField,
+    };
+  }
+
   const accountMatch = normalizedBankField.match(/^(.*?)[\s|,;:/-]+([A-Za-z0-9][A-Za-z0-9-]{4,})$/);
 
   if (!accountMatch) {
     return {
-      bankName: normalizedBankField,
+      bankName: normalizedBankField.length > 0 ? normalizedBankField : fallback,
       accountNumber: "",
     };
   }

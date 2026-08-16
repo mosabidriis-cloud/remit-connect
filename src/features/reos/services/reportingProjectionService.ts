@@ -1,17 +1,25 @@
 import { getSharedBatchesVisibleToBranchOfficer } from "./branchAssignmentService";
+import { getAllBranches } from "./branchRegistryService";
 import {
   getAllBranchProcessingQueueItems,
   getBranchProcessingQueueSummary,
   getBranchProcessingStatus,
+  getReservedAmountForAccount,
   type BranchProcessingQueueItem,
 } from "./branchProcessingQueueService";
+import { getAllFundingEvents, getAllPayoutAccounts } from "./liquidityService";
 import { buildProofDownloadBatchFromSharedBatch, getBatchDownloadSummary } from "./proofDownloadService";
 import { getAllAssignments, getAllSharedBatches } from "./sharedBatchStore";
 import type { Assignment } from "../types/assignment";
+import type { BranchHealth } from "../types/dashboard";
+import type { FundingEvent, PayoutAccount } from "../types/liquidity";
 import type { BatchDownloadSummary } from "../types/proofDownload";
 import type {
   BatchReportProjection,
   BranchReportProjection,
+  FundingEventProjection,
+  LiquidityAccountProjection,
+  LiquidityBranchProjection,
   ProcessingReportProjection,
   ProjectionScope,
   ProofReportProjection,
@@ -46,11 +54,11 @@ import type { SharedBatch } from "../types/sharedBatch";
 /** Grain: one Shared Batch. */
 export async function projectBatches(scope: ProjectionScope): Promise<readonly BatchReportProjection[]> {
   const projectedAt = createProjectedAt();
-  const batches = applyBatchScope(getAllSharedBatches(), scope);
-  const assignmentsByBatchId = indexAssignmentsByBatchId(getAllAssignments());
+  const batches = applyBatchScope(await getAllSharedBatches(), scope);
+  const assignmentsByBatchId = indexAssignmentsByBatchId(await getAllAssignments());
 
-  const projections = batches.map((batch) =>
-    createBatchProjection(batch, assignmentsByBatchId.get(batch.id) ?? null, projectedAt),
+  const projections = await Promise.all(
+    batches.map((batch) => createBatchProjection(batch, assignmentsByBatchId.get(batch.id) ?? null, projectedAt)),
   );
 
   return freezeAll(
@@ -64,10 +72,10 @@ export async function projectBatches(scope: ProjectionScope): Promise<readonly B
 /** Grain: one branch. */
 export async function projectBranches(scope: ProjectionScope): Promise<readonly BranchReportProjection[]> {
   const projectedAt = createProjectedAt();
-  const batches = applyBatchScope(getAllSharedBatches(), scope);
-  const assignments = getAllAssignments();
+  const batches = applyBatchScope(await getAllSharedBatches(), scope);
+  const assignments = await getAllAssignments();
   const branchNamesById = indexBranchNames(assignments);
-  const queueItems = getAllBranchProcessingQueueItems().filter((item) => isQueueItemInScope(item, scope));
+  const queueItems = (await getAllBranchProcessingQueueItems()).filter((item) => isQueueItemInScope(item, scope));
 
   const branchIds = new Set<string>();
   batches.forEach((batch) => {
@@ -77,41 +85,47 @@ export async function projectBranches(scope: ProjectionScope): Promise<readonly 
   });
   queueItems.forEach((item) => branchIds.add(item.branchId));
 
-  const projections = Array.from(branchIds).map((branchId) => {
-    const branchBatches = batches.filter((batch) => batch.assignedBranchId === branchId);
-    // getBranchProcessingQueueSummary owns every queue count - called, never recomputed.
-    const queueSummary = getBranchProcessingQueueSummary(branchId);
+  const projections = await Promise.all(
+    Array.from(branchIds).map(async (branchId) => {
+      const branchBatches = batches.filter((batch) => batch.assignedBranchId === branchId);
+      // getBranchProcessingQueueSummary owns every queue count - called, never recomputed.
+      const queueSummary = await getBranchProcessingQueueSummary(branchId);
 
-    return {
-      branchId,
-      branchName: branchNamesById.get(branchId) ?? branchId,
+      const downloadSummaries = await Promise.all(branchBatches.map((batch) => readBatchDownloadSummary(batch)));
+      const proofImageCount = downloadSummaries.reduce((total, summary) => total + (summary?.proofImageCount ?? 0), 0);
 
-      batchCount: branchBatches.length,
-      batchesAssigned: countLifecycle(branchBatches, "ASSIGNED"),
-      batchesProcessing: countLifecycle(branchBatches, "PROCESSING"),
-      batchesCompleted: countLifecycle(branchBatches, "COMPLETED"),
-      batchesReadyForDownload: countLifecycle(branchBatches, "READY_FOR_DOWNLOAD"),
-      batchesDownloaded: countLifecycle(branchBatches, "DOWNLOADED"),
+      return {
+        branchId,
+        branchName: branchNamesById.get(branchId) ?? branchId,
 
-      queueAssigned: queueSummary.assigned,
-      queueInProgress: queueSummary.inProgress,
-      queueOnHold: queueSummary.onHold,
-      queueCompleted: queueSummary.completed,
-      queueReturned: queueSummary.returned,
-      queueRemaining: queueSummary.remaining,
-      queueTotal: queueSummary.total,
-      queueCompletionPercentage: queueSummary.completionPercentage,
+        batchCount: branchBatches.length,
+        batchesAssigned: countLifecycle(branchBatches, "ASSIGNED"),
+        batchesProcessing: countLifecycle(branchBatches, "PROCESSING"),
+        batchesCompleted: countLifecycle(branchBatches, "COMPLETED"),
+        batchesReadyForDownload: countLifecycle(branchBatches, "READY_FOR_DOWNLOAD"),
+        batchesDownloaded: countLifecycle(branchBatches, "DOWNLOADED"),
 
-      branchProcessingStatus: getBranchProcessingStatus(branchId),
+        queueAssigned: queueSummary.assigned,
+        queueInProgress: queueSummary.inProgress,
+        queueOnHold: queueSummary.onHold,
+        queueCompleted: queueSummary.completed,
+        queueReturned: queueSummary.returned,
+        queueRemaining: queueSummary.remaining,
+        queueTotal: queueSummary.total,
+        queueCompletionPercentage: queueSummary.completionPercentage,
 
-      proofImageCount: branchBatches.reduce(
-        (total, batch) => total + (readBatchDownloadSummary(batch)?.proofImageCount ?? 0),
-        0,
-      ),
+        branchProcessingStatus: await getBranchProcessingStatus(branchId),
 
-      projectedAt,
-    } satisfies BranchReportProjection;
-  });
+        proofImageCount,
+
+        averageProcessingMinutes: computeAverageProcessingMinutes(
+          queueItems.filter((item) => item.branchId === branchId),
+        ),
+
+        projectedAt,
+      } satisfies BranchReportProjection;
+    }),
+  );
 
   return freezeAll(
     sortBy(projections, (first, second) =>
@@ -124,10 +138,10 @@ export async function projectBranches(scope: ProjectionScope): Promise<readonly 
 /** Grain: one transaction (one BranchProcessingQueueItem). */
 export async function projectProcessing(scope: ProjectionScope): Promise<readonly ProcessingReportProjection[]> {
   const projectedAt = createProjectedAt();
-  const assignments = getAllAssignments();
+  const assignments = await getAllAssignments();
   const assignmentsById = indexAssignmentsById(assignments);
   const branchNamesById = indexBranchNames(assignments);
-  const queueItems = getAllBranchProcessingQueueItems().filter((item) => isQueueItemInScope(item, scope));
+  const queueItems = (await getAllBranchProcessingQueueItems()).filter((item) => isQueueItemInScope(item, scope));
 
   const projections = queueItems.map((item) => {
     // A dangling assignment reference degrades batch context to null - never throws.
@@ -151,6 +165,13 @@ export async function projectProcessing(scope: ProjectionScope): Promise<readonl
       accountNumber: item.beneficiary.accountNumber,
 
       queueStatus: item.status,
+
+      startedAt: item.startedAt,
+      completedAt: item.completedAt,
+      completedByUserId: item.completedByUserId,
+      returnedAt: item.returnedAt,
+      returnedByUserId: item.returnedByUserId,
+      processingMinutes: computeProcessingMinutes(item.startedAt, item.completedAt),
 
       returnReasonId: item.returnReason?.id ?? null,
       returnReasonCode: item.returnReason?.code ?? null,
@@ -179,8 +200,8 @@ export async function projectProcessing(scope: ProjectionScope): Promise<readonl
 export async function projectProofs(scope: ProjectionScope): Promise<readonly ProofReportProjection[]> {
   const projectedAt = createProjectedAt();
   const projectedAtMs = new Date(projectedAt).getTime();
-  const assignmentsById = indexAssignmentsById(getAllAssignments());
-  const queueItems = getAllBranchProcessingQueueItems().filter((item) => isQueueItemInScope(item, scope));
+  const assignmentsById = indexAssignmentsById(await getAllAssignments());
+  const queueItems = (await getAllBranchProcessingQueueItems()).filter((item) => isQueueItemInScope(item, scope));
 
   const projections = queueItems.flatMap((item) => {
     const assignment = assignmentsById.get(item.assignmentId) ?? null;
@@ -221,13 +242,119 @@ export async function projectProofs(scope: ProjectionScope): Promise<readonly Pr
   );
 }
 
-function createBatchProjection(
+/**
+ * Grain: one payout account (Liquidity Management, LIQUIDITY_MANAGEMENT.md).
+ *
+ * reservedBalance is read from branchProcessingQueueService.getReservedAmountForAccount -
+ * the same function startBranchProcessingQueueItem calls for its own write-time
+ * sufficiency check. Not recomputed here.
+ */
+export async function projectLiquidityAccounts(scope: ProjectionScope): Promise<readonly LiquidityAccountProjection[]> {
+  const projectedAt = createProjectedAt();
+  const branchNamesById = indexBranchNamesById();
+  const accounts = (await getAllPayoutAccounts()).filter((account) => isBranchInScope(account.branchId, scope));
+
+  const projections = await Promise.all(
+    accounts.map((account) => buildLiquidityAccountProjection(account, branchNamesById, projectedAt)),
+  );
+
+  return freezeAll(
+    sortBy(projections, (first, second) =>
+      compareAscending(first.branchId, second.branchId) ||
+      compareAscending(first.accountId, second.accountId),
+    ),
+  );
+}
+
+/** Grain: one branch's liquidity position. Sums only this branch's ACTIVE accounts. */
+export async function projectLiquidityBranches(scope: ProjectionScope): Promise<readonly LiquidityBranchProjection[]> {
+  const projectedAt = createProjectedAt();
+  const branchNamesById = indexBranchNamesById();
+  const allAccounts = await getAllPayoutAccounts();
+  const allQueueItems = await getAllBranchProcessingQueueItems();
+  const allFundingEvents = await getAllFundingEvents();
+
+  const branchIds = new Set<string>();
+  allAccounts.forEach((account) => branchIds.add(account.branchId));
+  allQueueItems.forEach((item) => branchIds.add(item.branchId));
+
+  const projections = await Promise.all(
+    Array.from(branchIds)
+      .filter((branchId) => isBranchInScope(branchId, scope))
+      .map(async (branchId) => {
+        const branchAccounts = allAccounts.filter((account) => account.branchId === branchId && account.status === "ACTIVE");
+        const totalLiquidity = sumAmounts(branchAccounts, (account) => account.currentBalance);
+        const reservedAmounts = await Promise.all(branchAccounts.map((account) => getReservedAmountForAccount(account.id)));
+        const reservedLiquidity = reservedAmounts.reduce((total, amount) => total + amount, 0);
+        const availableLiquidity = totalLiquidity - reservedLiquidity;
+
+        const branchQueueItems = allQueueItems.filter((item) => item.branchId === branchId);
+        const pendingProcessing = sumAmounts(
+          branchQueueItems.filter((item) => item.status === "ASSIGNED"),
+          (item) => item.beneficiary.amount,
+        );
+        const consumptionToday = sumAmounts(
+          branchQueueItems.filter((item) => item.status === "COMPLETED" && item.completedAt && isSameCalendarDay(item.completedAt, projectedAt)),
+          (item) => item.beneficiary.amount,
+        );
+        const fundingToday = sumAmounts(
+          allFundingEvents.filter((event) => event.branchId === branchId && isSameCalendarDay(event.updatedAt, projectedAt)),
+          (event) => event.totalAmount,
+        );
+
+        const minimumThreshold = sumAmounts(branchAccounts, (account) => account.minimumThreshold);
+
+        return {
+          branchId,
+          branchName: branchNamesById.get(branchId) ?? branchId,
+
+          accountCount: branchAccounts.length,
+          totalLiquidity,
+          reservedLiquidity,
+          availableLiquidity,
+
+          pendingProcessing,
+          consumptionToday,
+          fundingToday,
+
+          health: computeLiquidityHealth(availableLiquidity, minimumThreshold),
+
+          projectedAt,
+        } satisfies LiquidityBranchProjection;
+      }),
+  );
+
+  return freezeAll(
+    sortBy(projections, (first, second) =>
+      compareAscending(first.branchName, second.branchName) ||
+      compareAscending(first.branchId, second.branchId),
+    ),
+  );
+}
+
+/** Grain: one funding event. */
+export async function projectFundingEvents(scope: ProjectionScope): Promise<readonly FundingEventProjection[]> {
+  const projectedAt = createProjectedAt();
+  const branchNamesById = indexBranchNamesById();
+  const events = (await getAllFundingEvents()).filter((event) => isBranchInScope(event.branchId, scope));
+
+  const projections = events.map((event) => buildFundingEventProjection(event, branchNamesById, projectedAt));
+
+  return freezeAll(
+    sortBy(projections, (first, second) =>
+      compareDescending(first.updatedAt, second.updatedAt) ||
+      compareAscending(first.fundingEventId, second.fundingEventId),
+    ),
+  );
+}
+
+async function createBatchProjection(
   batch: SharedBatch,
   assignment: Assignment | null,
   projectedAt: string,
-): BatchReportProjection {
+): Promise<BatchReportProjection> {
   // getBatchDownloadSummary owns the live proof rollup - called, never recomputed.
-  const downloadSummary = readBatchDownloadSummary(batch);
+  const downloadSummary = await readBatchDownloadSummary(batch);
 
   return {
     sharedBatchId: batch.id,
@@ -274,8 +401,8 @@ function createBatchProjection(
  * Returns null for a batch with no assigned branch, which buildProofDownloadBatchFromSharedBatch
  * cannot build a view for - an absence, not an error.
  */
-function readBatchDownloadSummary(batch: SharedBatch): BatchDownloadSummary | null {
-  const proofDownloadBatch = buildProofDownloadBatchFromSharedBatch(batch);
+async function readBatchDownloadSummary(batch: SharedBatch): Promise<BatchDownloadSummary | null> {
+  const proofDownloadBatch = await buildProofDownloadBatchFromSharedBatch(batch);
 
   return proofDownloadBatch ? getBatchDownloadSummary(proofDownloadBatch) : null;
 }
@@ -309,6 +436,15 @@ function isQueueItemInScope(item: BranchProcessingQueueItem, scope: ProjectionSc
   return Boolean(scope.branchId) && item.branchId === scope.branchId;
 }
 
+/** Actor scope for Liquidity Management grains. Same rule as applyBatchScope. */
+function isBranchInScope(branchId: string, scope: ProjectionScope): boolean {
+  if (scope.actorRole !== "BRANCH_OFFICER") {
+    return true;
+  }
+
+  return scope.branchId === branchId;
+}
+
 function indexAssignmentsById(assignments: readonly Assignment[]): Map<string, Assignment> {
   return new Map(assignments.map((assignment) => [assignment.id, assignment] as const));
 }
@@ -331,6 +467,143 @@ function indexBranchNames(assignments: readonly Assignment[]): Map<string, strin
 
 function countLifecycle(batches: readonly SharedBatch[], status: SharedBatch["lifecycleStatus"]): number {
   return batches.filter((batch) => batch.lifecycleStatus === status).length;
+}
+
+/**
+ * Branch names for Liquidity Management, from the branch registry (Section 3/14) rather
+ * than indexBranchNames's assignment-derived index - a branch may own payout accounts
+ * before it has ever received an Assignment.
+ */
+function indexBranchNamesById(): Map<string, string> {
+  return new Map(getAllBranches().map((branch) => [branch.id, branch.name] as const));
+}
+
+async function buildLiquidityAccountProjection(
+  account: PayoutAccount,
+  branchNamesById: Map<string, string>,
+  projectedAt: string,
+): Promise<LiquidityAccountProjection> {
+  const reservedBalance = await getReservedAmountForAccount(account.id);
+  const availableBalance = account.currentBalance - reservedBalance;
+
+  return {
+    accountId: account.id,
+    branchId: account.branchId,
+    branchName: branchNamesById.get(account.branchId) ?? null,
+
+    bank: account.bank,
+    accountNumber: account.accountNumber,
+    currency: account.currency,
+
+    currentBalance: account.currentBalance,
+    reservedBalance,
+    availableBalance,
+    minimumThreshold: account.minimumThreshold,
+
+    status: account.status,
+    health: computeLiquidityHealth(availableBalance, account.minimumThreshold),
+
+    lastUpdatedAt: account.lastUpdatedAt,
+    lastUpdatedByUserId: account.lastUpdatedByUserId,
+
+    projectedAt,
+  };
+}
+
+function buildFundingEventProjection(
+  event: FundingEvent,
+  branchNamesById: Map<string, string>,
+  projectedAt: string,
+): FundingEventProjection {
+  return {
+    fundingEventId: event.id,
+    branchId: event.branchId,
+    branchName: branchNamesById.get(event.branchId) ?? null,
+
+    accountCount: event.entries.length,
+    totalAmount: event.totalAmount,
+    reference: event.reference,
+    notes: event.notes,
+
+    updatedByUserId: event.updatedByUserId,
+    updatedAt: event.updatedAt,
+
+    projectedAt,
+  };
+}
+
+function sumAmounts<T>(items: T[], getAmount: (item: T) => number): number {
+  return items.reduce((total, item) => total + getAmount(item), 0);
+}
+
+/**
+ * Same-calendar-day comparison for Liquidity Management's "today" figures
+ * (consumptionToday, fundingToday) - the same rule dashboardService.isSameOperationalDay
+ * already applies to Transactions Today, expressed here since that helper is private to
+ * dashboardService.
+ */
+function isSameCalendarDay(value: string, referenceIso: string): boolean {
+  const date = new Date(value);
+  const reference = new Date(referenceIso);
+
+  return date.getFullYear() === reference.getFullYear()
+    && date.getMonth() === reference.getMonth()
+    && date.getDate() === reference.getDate();
+}
+
+/**
+ * GREEN/YELLOW/RED (types/dashboard.ts's existing vocabulary, not a second one -
+ * LIQUIDITY_MANAGEMENT.md Section 8). Below zero available is RED; below the configured
+ * minimum threshold is YELLOW; otherwise GREEN. A zero threshold never yields YELLOW,
+ * since "no threshold configured" cannot mean "always below it".
+ */
+function computeLiquidityHealth(availableBalance: number, minimumThreshold: number): BranchHealth {
+  if (availableBalance <= 0) {
+    return "RED";
+  }
+
+  if (minimumThreshold > 0 && availableBalance < minimumThreshold) {
+    return "YELLOW";
+  }
+
+  return "GREEN";
+}
+
+/**
+ * Duration for one transaction (Decision D-6, unblocked). Null unless both timestamps
+ * are present - a transaction still in progress, or one that never recorded a start
+ * (data predating this milestone), has no duration to report, not a zero one.
+ */
+function computeProcessingMinutes(startedAt: string | null, completedAt: string | null): number | null {
+  if (!startedAt || !completedAt) {
+    return null;
+  }
+
+  const startedAtMs = new Date(startedAt).getTime();
+  const completedAtMs = new Date(completedAt).getTime();
+
+  if (Number.isNaN(startedAtMs) || Number.isNaN(completedAtMs)) {
+    return null;
+  }
+
+  return Math.max(0, Math.round((completedAtMs - startedAtMs) / 60000));
+}
+
+/**
+ * Branch-level average, over only the completed transactions that have a computable
+ * duration. Null - not zero - when the branch has none, so a "0 minutes" branch is
+ * never confused with a "no data" branch.
+ */
+function computeAverageProcessingMinutes(queueItems: readonly BranchProcessingQueueItem[]): number | null {
+  const durations = queueItems
+    .map((item) => computeProcessingMinutes(item.startedAt, item.completedAt))
+    .filter((minutes): minutes is number => minutes !== null);
+
+  if (durations.length === 0) {
+    return null;
+  }
+
+  return Math.round(durations.reduce((total, minutes) => total + minutes, 0) / durations.length);
 }
 
 /**

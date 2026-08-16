@@ -35,7 +35,7 @@ export function UserDetailsPage() {
     <PageContainer>
       <PageHeader
         actions={
-          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white" type="button" onClick={() => navigate("edit")}>
+          <button className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white" type="button" onClick={() => navigate(`/reos/administration/users/${userId}/edit`)}>
             Edit User
           </button>
         }
@@ -54,12 +54,10 @@ export function UserDetailsPage() {
           <span className="text-xs font-semibold uppercase text-slate-500">Status</span>
           <UserStatusBadge status={user.status} accountLocked={user.accountLocked} />
         </div>
-        <Detail label="Failed Login Attempts" value={String(user.failedLoginAttempts)} />
         <Detail label="Last Login" value={user.lastLoginAt ?? "Never"} />
-        <Detail label="Password Changed" value={user.passwordChangedAt ?? "Not recorded"} />
-        <Detail label="Created By" value={user.createdBy} />
+        <Detail label="Created By" value={user.createdBy ?? "—"} />
         <Detail label="Created At" value={user.createdAt} />
-        <Detail label="Last Updated By" value={user.lastUpdatedBy} />
+        <Detail label="Last Updated By" value={user.lastUpdatedBy ?? "—"} />
         <Detail label="Last Updated At" value={user.lastUpdatedAt} />
       </div>
     </PageContainer>

@@ -7,11 +7,6 @@ export type CreditToAccountTransactionStatus =
   | "COMPLETED"
   | "RETURNED";
 
-export type TransactionAuditAction =
-  | "PROOF_UPLOADED"
-  | "TRANSACTION_COMPLETED"
-  | "TRANSACTION_RETURNED";
-
 export interface CreditToAccountTransaction {
   id: string;
   beneficiary: Beneficiary;
@@ -32,20 +27,4 @@ export interface BranchProcessingBatch {
   totalTransactions: number;
   currentPosition: number;
   transactions: CreditToAccountTransaction[];
-}
-
-export interface TransactionProcessingAudit {
-  id: string;
-  transactionId: string;
-  action: TransactionAuditAction;
-  performedByUserId: string;
-  performedAt: string;
-  details: string;
-}
-
-export interface ReturnTransactionInput {
-  transaction: CreditToAccountTransaction;
-  returnReason: ReturnReason;
-  comment: string;
-  returnedByUserId: string;
 }

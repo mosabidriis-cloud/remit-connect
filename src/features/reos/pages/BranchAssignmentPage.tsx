@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BranchAssignedBatchView } from "../components/BranchAssignedBatchView";
 import { BranchAssignmentForm, type BranchAssignmentFormValues } from "../components/BranchAssignmentForm";
 import { BranchAssignmentStatus } from "../components/BranchAssignmentStatus";
@@ -9,23 +9,59 @@ import {
   getSharedBatchesVisibleToBranchOfficer,
   reassignSharedBatch,
 } from "../services/branchAssignmentService";
-import { saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
+import { getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
+import { useReosSession } from "../layout/reosAuthContext";
+import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { SharedBatchReassignmentAudit } from "../types/branchAssignment";
 import type { SharedBatch } from "../types/sharedBatch";
 
 export function BranchAssignmentPage() {
+  const { session } = useReosSession();
   const [sharedBatch, setSharedBatch] = useState<SharedBatch | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [audit, setAudit] = useState<SharedBatchReassignmentAudit | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [unassignedBatches, setUnassignedBatches] = useState<SharedBatch[]>([]);
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
+  // Real, uploaded Shared Batches waiting for their initial assignment. Re-fetched after
+  // every successful assign/reassign (refreshSignal) so the just-assigned batch drops
+  // out of the list immediately, the same real-time behavior the in-memory store gave
+  // for free before this page's data moved to Supabase.
+  useEffect(() => {
+    let cancelled = false;
+
+    getAllSharedBatches()
+      .then((batches) => {
+        if (!cancelled) {
+          setUnassignedBatches(batches.filter((batch) => batch.assignmentStatus === "UNASSIGNED"));
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Unable to load uploaded Shared Batches.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshSignal]);
+
   const visibleBatches = getSharedBatchesVisibleToBranchOfficer(sharedBatch ? [sharedBatch] : [], sharedBatch?.assignedBranchId ?? "");
 
-  const handleSubmit = (values: BranchAssignmentFormValues) => {
+  const handleSubmit = async (values: BranchAssignmentFormValues) => {
     setError(null);
 
     try {
-      const batch = sharedBatch ?? createUnassignedSharedBatch(values);
+      const batch = sharedBatch ?? unassignedBatches.find((candidate) => candidate.id === selectedBatchId) ?? null;
+
+      if (!batch) {
+        throw new Error("Select an uploaded Shared Batch before assigning.");
+      }
+
       const branchName = values.branchId === "PORT_SUDAN" ? "Port Sudan Branch" : values.branchId;
 
       if (batch.assignmentStatus === "ASSIGNED") {
@@ -33,38 +69,51 @@ export function BranchAssignmentPage() {
           throw new Error("No existing Assignment was found to reassign.");
         }
 
-        const result = reassignSharedBatch({
+        if (!session) {
+          return;
+        }
+
+        const result = await reassignSharedBatch({
           sharedBatch: batch,
           newBranchId: values.branchId,
           newBranchName: branchName,
-          reassignedByUserId: values.actorUserId,
-          actorRole: values.actorRole,
+          reassignedByUserId: session.userId,
+          actorRole: session.role,
           reason: values.reassignmentReason,
           assignment,
         });
 
-        saveAssignment(result.assignment);
-        saveSharedBatch(result.sharedBatch);
+        await saveAssignment(result.assignment);
+        await saveSharedBatch(result.sharedBatch);
         setSharedBatch(result.sharedBatch);
         setAssignment(result.assignment);
         setAudit(result.audit);
+        setRefreshSignal((value) => value + 1);
         return;
       }
 
-      const result = assignSharedBatchToBranch({
+      if (!session) {
+        return;
+      }
+
+      const beneficiaries = await getBeneficiaries(batch.id);
+
+      const result = await assignSharedBatchToBranch({
         sharedBatch: batch,
-        beneficiaries: [],
+        beneficiaries: [...beneficiaries],
         branchId: values.branchId,
         branchName,
-        assignedByUserId: values.actorUserId,
-        actorRole: values.actorRole,
+        assignedByUserId: session.userId,
+        actorRole: session.role,
       });
 
-      saveAssignment(result.assignment);
-      saveSharedBatch(result.sharedBatch);
+      await saveAssignment(result.assignment);
+      await saveSharedBatch(result.sharedBatch);
       setSharedBatch(result.sharedBatch);
       setAssignment(result.assignment);
       setAudit(result.audit);
+      setSelectedBatchId(null);
+      setRefreshSignal((value) => value + 1);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to assign Shared Batch.");
     }
@@ -73,37 +122,50 @@ export function BranchAssignmentPage() {
   return (
     <PageContainer>
       <PageHeader
-        description="Manually assign one Shared Batch to exactly one branch."
+        description="Select an uploaded Shared Batch and assign it to a branch."
         title="Branch Assignment"
       />
+      <div
+        style={{
+          backgroundColor: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.md,
+          padding: spacing.lg,
+        }}
+      >
+        <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Uploaded Shared Batches Ready for Assignment</div>
+        {unassignedBatches.length === 0 ? (
+          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>
+            No uploaded Shared Batches are waiting for assignment.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.md }}>
+            {unassignedBatches.map((batch) => (
+              <button
+                key={batch.id}
+                onClick={() => setSelectedBatchId(batch.id)}
+                style={{
+                  backgroundColor: batch.id === selectedBatchId ? colors.blue50 : colors.surface,
+                  border: `1px solid ${batch.id === selectedBatchId ? colors.primary : colors.border}`,
+                  borderRadius: radius.sm,
+                  cursor: "pointer",
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                  textAlign: "left",
+                }}
+                type="button"
+              >
+                <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{batch.reference}</div>
+                <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+                  {batch.fileName} • {batch.totalBeneficiaries} beneficiaries • uploaded {new Date(batch.uploadDate).toLocaleString()}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <BranchAssignmentForm onSubmit={handleSubmit} />
       <BranchAssignmentStatus audit={audit} error={error} sharedBatch={sharedBatch} />
       <BranchAssignedBatchView branchId={sharedBatch?.assignedBranchId ?? ""} sharedBatches={visibleBatches} />
     </PageContainer>
   );
-}
-
-function createUnassignedSharedBatch(values: BranchAssignmentFormValues): SharedBatch {
-  return {
-    id: values.sharedBatchId,
-    reference: values.sharedBatchReference,
-    fileName: values.fileName,
-    uploadDate: new Date().toISOString(),
-    uploadedByUserId: values.uploadedByUserId,
-    totalBeneficiaries: values.totalBeneficiaries,
-    assignedBeneficiaries: 0,
-    completedBeneficiaries: 0,
-    returnedBeneficiaries: 0,
-    duplicateReferenceCount: 0,
-    manualReviewCount: 0,
-    assignmentStatus: "UNASSIGNED",
-    lifecycleStatus: "ASSIGNED",
-    assignedBranchId: null,
-    assignedByUserId: null,
-    assignedAt: null,
-    isLocked: false,
-    lastReassignedByUserId: null,
-    lastReassignedAt: null,
-    lastReassignmentReason: null,
-  };
 }

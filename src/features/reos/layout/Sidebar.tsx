@@ -2,94 +2,11 @@ import { Link, useLocation } from "react-router-dom";
 import Badge from "../../../components/ui/Badge";
 import { colors, radius, shadows, spacing, typography } from "../theme";
 import { LogoPlaceholder } from "./LogoPlaceholder";
-
-export type SidebarItem = {
-  label: string;
-  href: string;
-  match: RegExp;
-};
-
-type SidebarSection = {
-  label: string;
-  items: SidebarItem[];
-};
+import { sidebarSections } from "./sidebarConfig";
 
 type SidebarProps = {
   collapsed: boolean;
 };
-
-export const sidebarSections: SidebarSection[] = [
-  {
-    label: "Operations",
-    items: [
-      {
-        label: "Dashboard",
-        href: "/reos/dashboard",
-        match: /^\/reos\/dashboard$/,
-      },
-      {
-        label: "Reports",
-        href: "/reos/reports",
-        match: /^\/reos\/reports$/,
-      },
-      {
-        label: "Branch Processing",
-        href: "/reos/branches/BRANCH_ID/processing",
-        match: /^\/reos\/branches\/[^/]+\/processing$/,
-      },
-      {
-        label: "Transaction Processing",
-        href: "/reos/branches/BRANCH_ID/processing/BATCH_ID/transactions/TRANSACTION_ID",
-        match: /^\/reos\/branches\/[^/]+\/processing\/[^/]+\/transactions\/[^/]+$/,
-      },
-    ],
-  },
-  {
-    label: "Shared Batches",
-    items: [
-      {
-        label: "Upload",
-        href: "/reos/shared-batches/upload",
-        match: /^\/reos\/shared-batches\/upload$/,
-      },
-      {
-        label: "Assignment",
-        href: "/reos/shared-batches/assignment",
-        match: /^\/reos\/shared-batches\/assignment$/,
-      },
-      {
-        label: "Proof Download",
-        href: "/reos/shared-batches/BATCH_ID/proof-download",
-        match: /^\/reos\/shared-batches\/[^/]+\/proof-download$/,
-      },
-    ],
-  },
-  {
-    label: "Administration",
-    items: [
-      {
-        label: "Users",
-        href: "/reos/administration/users",
-        match: /^\/reos\/administration\/users$/,
-      },
-      {
-        label: "Create User",
-        href: "/reos/administration/users/create",
-        match: /^\/reos\/administration\/users\/create$/,
-      },
-      {
-        label: "User Details",
-        href: "/reos/administration/users/USER_ID",
-        match: /^\/reos\/administration\/users\/[^/]+$/,
-      },
-      {
-        label: "Edit User",
-        href: "/reos/administration/users/USER_ID/edit",
-        match: /^\/reos\/administration\/users\/[^/]+\/edit$/,
-      },
-    ],
-  },
-];
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const location = useLocation();
@@ -178,10 +95,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
       ) : null}
     </aside>
   );
-}
-
-export function getActiveSidebarItem(pathname: string): SidebarItem | undefined {
-  return sidebarSections.flatMap((section) => section.items).find((item) => item.match.test(pathname));
 }
 
 function getInitials(value: string): string {

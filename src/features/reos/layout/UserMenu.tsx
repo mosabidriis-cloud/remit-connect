@@ -1,15 +1,30 @@
 import { useNavigate } from "react-router-dom";
 import { colors, radius, spacing, typography } from "../theme";
+import { useReosSession } from "./reosAuthContext";
 
-const DEV_AUTH_KEY = "reos-auth";
+const roleLabel: Record<string, string> = {
+  OPERATIONS_MANAGER: "Operations Manager",
+  DIRECT_REMIT_OFFICER: "Direct Remit Officer",
+  BRANCH_OFFICER: "Branch Officer",
+};
 
 export function UserMenu() {
   const navigate = useNavigate();
+  const { session, signOut } = useReosSession();
 
-  function handleLogout() {
-    localStorage.removeItem(DEV_AUTH_KEY);
+  async function handleLogout() {
+    await signOut();
     navigate("/login", { replace: true });
   }
+
+  const initials = session
+    ? session.fullName
+        .split(" ")
+        .map((word) => word.charAt(0))
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "?";
 
   return (
     <div className="relative">
@@ -35,13 +50,13 @@ export function UserMenu() {
             fontWeight: 600,
           }}
         >
-          OM
+          {initials}
         </span>
-        <span className="hidden lg:inline">Operations Manager</span>
+        <span className="hidden lg:inline">{session ? roleLabel[session.role] : "..."}</span>
       </button>
       <button
         className="absolute right-0 top-full mt-2 flex h-9 items-center rounded border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-        onClick={handleLogout}
+        onClick={() => void handleLogout()}
         style={{ borderColor: colors.border, borderRadius: radius.sm, color: colors.slate700 }}
         type="button"
       >

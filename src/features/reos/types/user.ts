@@ -9,9 +9,9 @@ export type ReosUserStatus =
 
 export interface User {
   id: string;
+  email: string;
   employeeId: string;
   username: string;
-  passwordHash: string;
   fullName: string;
   organization: string;
   role: ReosUserRole;
@@ -20,22 +20,28 @@ export interface User {
   status: ReosUserStatus;
   accountLocked: boolean;
   forcePasswordChange: boolean;
-  failedLoginAttempts: number;
-  passwordChangedAt: string | null;
   lastLoginAt: string | null;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: string;
-  lastUpdatedBy: string;
+  lastUpdatedBy: string | null;
   lastUpdatedAt: string;
 }
 
+/**
+ * Creating a user provisions a real Supabase Auth credential (AUTHENTICATION.md
+ * Section 4) via the `admin-create-user` Edge Function - `email`/`initialPassword`
+ * replace the old, never-real `passwordHash` text field. `createdBy` is supplied by
+ * the caller (the acting Operations Manager's session), not the form.
+ */
 export type UserCreateInput = Omit<
   User,
-  "id" | "failedLoginAttempts" | "passwordChangedAt" | "lastLoginAt" | "createdAt" | "lastUpdatedAt"
->;
+  "id" | "lastLoginAt" | "createdAt" | "lastUpdatedAt" | "createdBy" | "lastUpdatedBy"
+> & {
+  initialPassword: string;
+};
 
 export type UserUpdateInput = Partial<
-  Omit<User, "id" | "createdBy" | "createdAt">
+  Omit<User, "id" | "email" | "createdBy" | "createdAt">
 > & {
   lastUpdatedBy: string;
 };

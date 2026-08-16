@@ -1,25 +1,28 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import TextInput from "../../components/forms/TextInput";
-
-const DEV_AUTH_KEY = "reos-auth";
+import { getDefaultLandingPath, login } from "../../features/reos/services/reosAuthService";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (localStorage.getItem(DEV_AUTH_KEY) === "true") {
-      navigate("/reos/dashboard", { replace: true });
-    }
-  }, [navigate]);
+  async function handleLogin() {
+    setError(null);
+    setSubmitting(true);
 
-  function handleLogin() {
-    localStorage.setItem(DEV_AUTH_KEY, "true");
-    navigate("/reos/dashboard", { replace: true });
+    try {
+      const session = await login(username, password);
+      navigate(session.forcePasswordChange ? "/reos/change-password" : getDefaultLandingPath(session), { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Sign-in failed.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -64,10 +67,10 @@ export default function LoginPage() {
           </div>
 
           <TextInput
-            label="Username"
+            label="Email"
             value={username}
             onChange={setUsername}
-            placeholder="Enter username"
+            placeholder="Enter your email"
           />
 
           <TextInput
@@ -78,13 +81,15 @@ export default function LoginPage() {
             placeholder="Enter password"
           />
 
+          {error ? <p style={{ color: "#DC2626", fontSize: 13, marginTop: 8 }}>{error}</p> : null}
+
           <div
             style={{
               marginTop: 10,
             }}
           >
-            <Button onClick={handleLogin}>
-              Sign In
+            <Button disabled={submitting} onClick={() => void handleLogin()}>
+              {submitting ? "Signing In..." : "Sign In"}
             </Button>
           </div>
 

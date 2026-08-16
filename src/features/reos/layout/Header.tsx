@@ -2,7 +2,7 @@ import { useLocation } from "react-router-dom";
 import { colors, radius, spacing } from "../theme";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { SearchBar } from "./SearchBar";
-import { getActiveSidebarItem } from "./Sidebar";
+import { getActiveSidebarItem } from "./sidebarConfig";
 import { UserMenu } from "./UserMenu";
 
 type HeaderProps = {

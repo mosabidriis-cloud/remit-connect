@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BranchProcessingQueue } from "../components/BranchProcessingQueue";
 import { PageContainer } from "../components/common/PageContainer";
@@ -7,13 +7,30 @@ import {
   ProofDownloadNavigation,
   type ProofDownloadNavigationTarget,
 } from "../components/ProofDownloadNavigation";
+import { useReosSession } from "../layout/reosAuthContext";
 import { getAssignmentsByBranch, getSharedBatch } from "../services/sharedBatchStore";
+import type { Assignment } from "../types/assignment";
 import type { SharedBatch } from "../types/sharedBatch";
 
 export function BranchProcessingPage() {
   const { branchId = "" } = useParams();
+  const { session } = useReosSession();
+  const [branchAssignments, setBranchAssignments] = useState<Assignment[]>([]);
+  const [proofDownloadTargets, setProofDownloadTargets] = useState<ProofDownloadNavigationTarget[]>([]);
 
-  const branchAssignments = useMemo(() => getAssignmentsByBranch(branchId), [branchId]);
+  useEffect(() => {
+    let cancelled = false;
+
+    getAssignmentsByBranch(branchId).then((assignments) => {
+      if (!cancelled) {
+        setBranchAssignments(assignments);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
 
   const branchName = branchAssignments[0]?.assignedBranchName ?? branchId;
 
@@ -21,17 +38,29 @@ export function BranchProcessingPage() {
   // Proof Management. READY_FOR_DOWNLOAD is also shown so an already-opened batch
   // stays reachable if the officer navigates away and back. DOWNLOADED batches are
   // excluded - their workflow is finished.
-  const proofDownloadTargets = useMemo<ProofDownloadNavigationTarget[]>(() => {
-    const sharedBatchIds = new Set(branchAssignments.map((assignment) => assignment.sharedBatchId));
+  useEffect(() => {
+    let cancelled = false;
+    const sharedBatchIds = [...new Set(branchAssignments.map((assignment) => assignment.sharedBatchId))];
 
-    return Array.from(sharedBatchIds)
-      .map((sharedBatchId) => getSharedBatch(sharedBatchId))
-      .filter((sharedBatch): sharedBatch is SharedBatch =>
-        sharedBatch?.lifecycleStatus === "COMPLETED" || sharedBatch?.lifecycleStatus === "READY_FOR_DOWNLOAD")
-      .map((sharedBatch) => ({
-        sharedBatchId: sharedBatch.id,
-        sharedBatchReference: sharedBatch.reference,
-      }));
+    Promise.all(sharedBatchIds.map((sharedBatchId) => getSharedBatch(sharedBatchId))).then((sharedBatches) => {
+      if (cancelled) {
+        return;
+      }
+
+      const targets = sharedBatches
+        .filter((sharedBatch): sharedBatch is SharedBatch =>
+          sharedBatch?.lifecycleStatus === "COMPLETED" || sharedBatch?.lifecycleStatus === "READY_FOR_DOWNLOAD")
+        .map((sharedBatch) => ({
+          sharedBatchId: sharedBatch.id,
+          sharedBatchReference: sharedBatch.reference,
+        }));
+
+      setProofDownloadTargets(targets);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [branchAssignments]);
 
   return (
@@ -40,7 +69,7 @@ export function BranchProcessingPage() {
         description="Branch processing queue for the selected branch."
         title="Branch Processing"
       />
-      <BranchProcessingQueue assignments={branchAssignments} branchId={branchId} branchName={branchName} />
+      <BranchProcessingQueue actorUserId={session?.userId ?? ""} assignments={branchAssignments} branchId={branchId} branchName={branchName} />
       <ProofDownloadNavigation targets={proofDownloadTargets} />
     </PageContainer>
   );

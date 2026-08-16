@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { getActiveSidebarItem } from "./Sidebar";
+import { getActiveSidebarItem } from "./sidebarConfig";
 
 export function Breadcrumbs() {
   const location = useLocation();

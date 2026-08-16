@@ -18,7 +18,7 @@ REOS (Remit Exchange Operations System) is an internal employee-only operations 
 4. REOS normalizes the Bank field into bankName and accountNumber.
 5. REOS detects duplicate Direct Remit References and flags duplicates for manual review.
 6. Direct Remit Officer creates a Shared Batch.
-7. Direct Remit Officer manually assigns the Shared Batch to one branch.
+7. Operations Manager manually assigns the Shared Batch to one branch (DECISIONS.md DEC-014, supersedes the prior Direct Remit Officer assignment rule).
 8. The Shared Batch becomes locked immediately after assignment.
 9. Branch Officer processes assigned transactions only.
 10. Branch Officer uploads one or more proof-of-payment screenshots for completed transactions.
@@ -30,7 +30,8 @@ REOS (Remit Exchange Operations System) is an internal employee-only operations 
 
 - Owns the system lifecycle.
 - Manages users, branches, audit, reports, dashboards, settings, and master data.
-- May reassign Shared Batches only as an administrative override.
+- Assigns Shared Batches to branches (DECISIONS.md DEC-014).
+- Reassigns Shared Batches as an administrative override.
 
 ### Direct Remit Officer
 
@@ -38,11 +39,11 @@ REOS (Remit Exchange Operations System) is an internal employee-only operations 
 - Uploads Direct Remit batches.
 - Validates uploaded batches.
 - Creates Shared Batches.
-- Assigns Shared Batches to branches.
 - Views completed batches.
 - Downloads proof-of-payment files.
 - Uploads proofs back to Direct Remit.
 - Does not process branch transactions.
+- Does not assign or reassign Shared Batches (DECISIONS.md DEC-014).
 
 ### Branch Officer
 

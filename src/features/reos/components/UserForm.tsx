@@ -4,7 +4,8 @@ import type { ReosUserRole, ReosUserStatus, User } from "../types/user";
 export type UserFormValues = {
   employeeId: string;
   username: string;
-  passwordHash: string;
+  email: string;
+  initialPassword: string;
   fullName: string;
   organization: string;
   role: ReosUserRole;
@@ -17,6 +18,8 @@ export type UserFormValues = {
 
 type UserFormProps = {
   initialUser?: User;
+  /** Create provisions a real credential (email + initial password); edit never changes either. */
+  mode: "create" | "edit";
   submitLabel: string;
   onSubmit: (values: UserFormValues) => void;
 };
@@ -29,7 +32,7 @@ const roleOptions: Array<{ value: ReosUserRole; label: string }> = [
 
 const statusOptions: ReosUserStatus[] = ["ACTIVE", "INACTIVE"];
 
-export function UserForm({ initialUser, submitLabel, onSubmit }: UserFormProps) {
+export function UserForm({ initialUser, mode, submitLabel, onSubmit }: UserFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -39,7 +42,8 @@ export function UserForm({ initialUser, submitLabel, onSubmit }: UserFormProps) 
     onSubmit({
       employeeId: String(formData.get("employeeId") ?? ""),
       username: String(formData.get("username") ?? ""),
-      passwordHash: String(formData.get("passwordHash") ?? ""),
+      email: String(formData.get("email") ?? initialUser?.email ?? ""),
+      initialPassword: String(formData.get("initialPassword") ?? ""),
       fullName: String(formData.get("fullName") ?? ""),
       organization: String(formData.get("organization") ?? ""),
       role,
@@ -62,10 +66,18 @@ export function UserForm({ initialUser, submitLabel, onSubmit }: UserFormProps) 
           Username
           <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.username} name="username" required />
         </label>
-        <label className="grid gap-1 text-sm font-medium text-slate-700">
-          Password Hash
-          <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.passwordHash} name="passwordHash" required />
-        </label>
+        {mode === "create" ? (
+          <>
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              Email (sign-in identity)
+              <input className="rounded border border-slate-300 px-3 py-2" name="email" required type="email" />
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              Initial Password
+              <input className="rounded border border-slate-300 px-3 py-2" minLength={8} name="initialPassword" required type="password" />
+            </label>
+          </>
+        ) : null}
         <label className="grid gap-1 text-sm font-medium text-slate-700">
           Full Name
           <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.fullName} name="fullName" required />

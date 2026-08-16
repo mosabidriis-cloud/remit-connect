@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusBadge } from "./common/StatusBadge";
 import { BranchProcessingCompletionDialog } from "./BranchProcessingCompletionDialog";
 import { ProofGallery } from "./ProofGallery";
 import { ProofUpload } from "./ProofUpload";
 import { ReturnTransactionDialog } from "./ReturnTransactionDialog";
 import { colors, radius, spacing, typography } from "../theme";
-import { createProofOfPayment } from "../services/proofOfPaymentService";
+import { getPayoutAccountsByBranch } from "../services/liquidityService";
 import { getActiveReturnReasons } from "../services/transactionProcessingService";
 import type { Assignment } from "../types/assignment";
+import type { PayoutAccount } from "../types/liquidity";
 import {
   addProofToBranchProcessingQueueItem,
   completeBranchProcessingQueueItem,
@@ -15,18 +16,31 @@ import {
   getBranchProcessingQueue,
   getBranchProcessingQueueSummary,
   getBranchProcessingStatus,
+  getReservedAmountForAccount,
   hydrateBranchProcessingQueue,
   isBranchProcessingComplete,
   returnBranchProcessingQueueItem,
+  startBranchProcessingQueueItem,
   type BranchProcessingQueueItem,
   type BranchProcessingQueueStatus,
+  type BranchProcessingQueueSummary,
   type BranchProcessingStatus,
   updateBranchProcessingQueueItemStatus,
 } from "../services/branchProcessingQueueService";
 
-const branchOfficerUserId = "BRANCH_OFFICER";
+const emptySummary: BranchProcessingQueueSummary = {
+  assigned: 0,
+  inProgress: 0,
+  completed: 0,
+  onHold: 0,
+  returned: 0,
+  remaining: 0,
+  total: 0,
+  completionPercentage: 0,
+};
 
 type BranchProcessingQueueProps = {
+  actorUserId: string;
   assignments: Assignment[];
   branchId: string;
   branchName: string;
@@ -70,75 +84,198 @@ function LockedQueueNotice() {
   );
 }
 
-export function BranchProcessingQueue({ assignments, branchId, branchName }: BranchProcessingQueueProps) {
+export function BranchProcessingQueue({ actorUserId, assignments, branchId, branchName }: BranchProcessingQueueProps) {
   const [queueItems, setQueueItems] = useState<BranchProcessingQueueItem[]>(() => []);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [branchStatus, setBranchStatus] = useState<BranchProcessingStatus>("PROCESSING");
   const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [selectedPayoutAccountId, setSelectedPayoutAccountId] = useState<string>("");
+  const [summary, setSummary] = useState<BranchProcessingQueueSummary>(emptySummary);
+  const [canFinalize, setCanFinalize] = useState(false);
+  const [eligiblePayoutAccounts, setEligiblePayoutAccounts] = useState<PayoutAccount[]>([]);
+  const [selectedPayoutAccount, setSelectedPayoutAccount] = useState<PayoutAccount | null>(null);
 
-  useMemo(() => {
-    const nextItems = hydrateBranchProcessingQueue(branchId, assignments);
-    setQueueItems(nextItems);
-    setSelectedItemId(nextItems[0]?.id ?? null);
-    setBranchStatus(getBranchProcessingStatus(branchId));
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const nextItems = await hydrateBranchProcessingQueue(branchId, assignments);
+      const status = await getBranchProcessingStatus(branchId);
+
+      if (!cancelled) {
+        setQueueItems(nextItems);
+        setSelectedItemId(nextItems[0]?.id ?? null);
+        setBranchStatus(status);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [assignments, branchId]);
 
-  const summary = useMemo(() => getBranchProcessingQueueSummary(branchId), [branchId, queueItems]);
-  const canFinalize = useMemo(() => isBranchProcessingComplete(branchId), [branchId, queueItems]);
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const [summaryValue, complete] = await Promise.all([
+        getBranchProcessingQueueSummary(branchId),
+        isBranchProcessingComplete(branchId),
+      ]);
+
+      if (!cancelled) {
+        setSummary(summaryValue);
+        setCanFinalize(complete);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, queueItems]);
+
   const returnReasons = useMemo(() => getActiveReturnReasons(), []);
 
   const isLocked = branchStatus === "COMPLETED";
   const selectedItem = queueItems.find((item) => item.id === selectedItemId) ?? null;
   const canComplete = Boolean(selectedItem && selectedItem.status === "IN_PROGRESS" && selectedItem.proofs.length > 0);
 
+  // Payout accounts with enough available balance (current minus already-reserved,
+  // LIQUIDITY_MANAGEMENT.md Section 7.2) to cover this transaction. Only relevant the
+  // first time a transaction starts - resuming from ON_HOLD reuses the account already
+  // chosen and needs no picker.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      // Deferred past the current synchronous effect tick on every path (including the
+      // early-exit below) so no setState call here ever runs synchronously within the
+      // effect body itself.
+      await Promise.resolve();
+
+      if (!selectedItem || selectedItem.payoutAccountId !== null) {
+        if (!cancelled) {
+          setEligiblePayoutAccounts([]);
+        }
+        return;
+      }
+
+      const activeAccounts = (await getPayoutAccountsByBranch(branchId)).filter((account) => account.status === "ACTIVE");
+      const eligible: PayoutAccount[] = [];
+
+      for (const account of activeAccounts) {
+        const reserved = await getReservedAmountForAccount(account.id);
+        const available = account.currentBalance - reserved;
+
+        if (available >= selectedItem.beneficiary.amount) {
+          eligible.push(account);
+        }
+      }
+
+      if (!cancelled) {
+        setEligiblePayoutAccounts(eligible);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, selectedItem, queueItems]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      // See the eligiblePayoutAccounts effect above for why every path defers past an
+      // await before calling setState, including this early exit.
+      await Promise.resolve();
+
+      if (!selectedItem?.payoutAccountId) {
+        if (!cancelled) {
+          setSelectedPayoutAccount(null);
+        }
+        return;
+      }
+
+      const accounts = await getPayoutAccountsByBranch(branchId);
+
+      if (!cancelled) {
+        setSelectedPayoutAccount(accounts.find((account) => account.id === selectedItem.payoutAccountId) ?? null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, selectedItem]);
+
   const handleSelectItem = (itemId: string) => {
     setSelectedItemId(itemId);
+    setSelectedPayoutAccountId("");
     setMessage(null);
   };
 
-  const handleStatusChange = (status: BranchProcessingQueueStatus) => {
+  const refreshQueueItems = async () => {
+    setQueueItems(await getBranchProcessingQueue(branchId));
+  };
+
+  const handleStatusChange = async (status: BranchProcessingQueueStatus) => {
     if (!selectedItem || isLocked) {
       return;
     }
 
-    updateBranchProcessingQueueItemStatus(selectedItem.id, status);
-    setQueueItems(getBranchProcessingQueue(branchId));
+    await updateBranchProcessingQueueItemStatus(selectedItem.id, status, actorUserId);
+    await refreshQueueItems();
   };
 
-  const handleProofUpload = (files: File[]) => {
+  const handleStartProcessing = async () => {
+    if (!selectedItem || isLocked) {
+      return;
+    }
+
+    try {
+      await startBranchProcessingQueueItem(selectedItem.id, selectedPayoutAccountId || undefined, actorUserId);
+      setSelectedPayoutAccountId("");
+      await refreshQueueItems();
+      setMessage(null);
+    } catch (caughtError) {
+      setMessage(caughtError instanceof Error ? caughtError.message : "Unable to start processing.");
+    }
+  };
+
+  const handleProofUpload = async (files: File[]) => {
     if (!selectedItem) {
       return;
     }
 
     try {
-      files.forEach((file) => {
-        const proof = createProofOfPayment(file, selectedItem.id, branchOfficerUserId);
-        addProofToBranchProcessingQueueItem(selectedItem.id, proof);
-      });
+      for (const file of files) {
+        await addProofToBranchProcessingQueueItem(selectedItem.id, file, actorUserId);
+      }
 
-      setQueueItems(getBranchProcessingQueue(branchId));
+      await refreshQueueItems();
       setMessage(null);
     } catch (caughtError) {
       setMessage(caughtError instanceof Error ? caughtError.message : "Unable to upload proof.");
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!selectedItem) {
       return;
     }
 
     try {
-      completeBranchProcessingQueueItem(selectedItem.id);
-      setQueueItems(getBranchProcessingQueue(branchId));
+      await completeBranchProcessingQueueItem(selectedItem.id, actorUserId);
+      await refreshQueueItems();
       setMessage("Transaction completed.");
     } catch (caughtError) {
       setMessage(caughtError instanceof Error ? caughtError.message : "Unable to complete transaction.");
     }
   };
 
-  const handleReturn = (returnReasonId: string, comment: string) => {
+  const handleReturn = async (returnReasonId: string, comment: string) => {
     if (!selectedItem) {
       return;
     }
@@ -151,16 +288,16 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
     }
 
     try {
-      returnBranchProcessingQueueItem(selectedItem.id, returnReason, comment);
-      setQueueItems(getBranchProcessingQueue(branchId));
+      await returnBranchProcessingQueueItem(selectedItem.id, returnReason, comment, actorUserId);
+      await refreshQueueItems();
       setMessage("Transaction returned.");
     } catch (caughtError) {
       setMessage(caughtError instanceof Error ? caughtError.message : "Unable to return transaction.");
     }
   };
 
-  const handleConfirmFinalize = () => {
-    const result = finalizeBranchProcessing(branchId);
+  const handleConfirmFinalize = async () => {
+    const result = await finalizeBranchProcessing(branchId, actorUserId);
 
     if (result) {
       setBranchStatus(result);
@@ -265,16 +402,60 @@ export function BranchProcessingQueue({ assignments, branchId, branchName }: Bra
             <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
               Account Number: {selectedItem.beneficiary.accountNumber}
             </div>
+            {selectedPayoutAccount ? (
+              <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+                Payout Account: {selectedPayoutAccount.bank} - {selectedPayoutAccount.accountNumber} ({selectedPayoutAccount.currency})
+              </div>
+            ) : null}
 
             <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.lg }}>
               {isLocked && <LockedQueueNotice />}
-              {!isLocked && (selectedItem.status === "ASSIGNED" || selectedItem.status === "ON_HOLD") && (
+              {!isLocked && selectedItem.status === "ASSIGNED" && (
+                <>
+                  <label style={{ color: colors.text, display: "grid", fontSize: typography.small, fontWeight: 500, gap: spacing.xs }}>
+                    Payout Account
+                    <select
+                      onChange={(event) => setSelectedPayoutAccountId(event.target.value)}
+                      style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}
+                      value={selectedPayoutAccountId}
+                    >
+                      <option value="">Select a payout account...</option>
+                      {eligiblePayoutAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.bank} - {account.accountNumber} ({account.currency} {account.currentBalance.toLocaleString()} available)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {eligiblePayoutAccounts.length === 0 ? (
+                    <div style={{ color: colors.muted, fontSize: typography.small }}>
+                      No active payout account has enough available balance for this transaction.
+                    </div>
+                  ) : null}
+                  <button
+                    disabled={!selectedPayoutAccountId}
+                    onClick={handleStartProcessing}
+                    style={{
+                      backgroundColor: selectedPayoutAccountId ? colors.primary : colors.slate200,
+                      border: "none",
+                      borderRadius: radius.sm,
+                      color: selectedPayoutAccountId ? colors.surface : colors.muted,
+                      cursor: selectedPayoutAccountId ? "pointer" : "not-allowed",
+                      padding: `${spacing.sm}px ${spacing.md}px`,
+                    }}
+                    type="button"
+                  >
+                    Start Processing
+                  </button>
+                </>
+              )}
+              {!isLocked && selectedItem.status === "ON_HOLD" && (
                 <button
-                  onClick={() => handleStatusChange("IN_PROGRESS")}
+                  onClick={handleStartProcessing}
                   style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.md}px` }}
                   type="button"
                 >
-                  {selectedItem.status === "ON_HOLD" ? "Resume Processing" : "Start Processing"}
+                  Resume Processing
                 </button>
               )}
               {!isLocked && selectedItem.status === "IN_PROGRESS" && (

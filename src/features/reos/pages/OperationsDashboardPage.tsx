@@ -7,6 +7,7 @@ import { CriticalAlertCard } from "../components/CriticalAlertCard";
 import { ExceptionCenter } from "../components/ExceptionCenter";
 import { TodaySummary } from "../components/TodaySummary";
 import { WorkQueueTable } from "../components/WorkQueueTable";
+import { useReosSession } from "../layout/reosAuthContext";
 import { reportService } from "../services/reportService";
 import type { OperationsDashboard, OperationsDashboardRole } from "../types/dashboard";
 import type { ProjectionScope } from "../types/reportingProjection";
@@ -23,47 +24,49 @@ import type { ProjectionScope } from "../types/reportingProjection";
  * navigated here with state, so every KPI rendered 0 for a real user.
  */
 
-/**
- * REOS has no current-user context yet, so the acting user is fixed here - the same
- * approach ReportsPage and ProofDownloadPage take. The dashboard is an Operations Manager
- * capability (BUSINESS_RULES.md) and that role has enterprise-wide visibility, which is
- * the correct scope for this page. Recorded in TECH_DEBT.md.
- */
-const dashboardActor: ProjectionScope = {
-  actorUserId: "OPERATIONS_MANAGER",
-  actorRole: "OPERATIONS_MANAGER",
-  branchId: null,
-};
-
-const dashboardRole: OperationsDashboardRole = "OPERATIONS_MANAGER";
-
 export function OperationsDashboardPage() {
+  const { session } = useReosSession();
   const [dashboard, setDashboard] = useState<OperationsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!session) {
+      return;
+    }
+
     let cancelled = false;
 
-    setError(null);
+    // This route is RoleGate'd to OPERATIONS_MANAGER only (AUTHENTICATION.md Section 6).
+    const dashboardActor: ProjectionScope = { actorUserId: session.userId, actorRole: session.role, branchId: session.branchId };
+    const dashboardRole: OperationsDashboardRole = "OPERATIONS_MANAGER";
 
-    reportService
-      .generateOperationsDashboard(dashboardActor, dashboardRole)
-      .then((generated) => {
+    (async () => {
+      // Deferred past the current synchronous effect tick so the error-reset below never
+      // runs synchronously within the effect body itself.
+      await Promise.resolve();
+
+      if (!cancelled) {
+        setError(null);
+      }
+
+      try {
+        const generated = await reportService.generateOperationsDashboard(dashboardActor, dashboardRole);
+
         if (!cancelled) {
           setDashboard(generated);
         }
-      })
-      .catch((cause: unknown) => {
+      } catch (cause) {
         if (!cancelled) {
           setDashboard(null);
           setError(cause instanceof Error ? cause.message : "The dashboard could not be generated.");
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   const handleDrillDown = (path: string) => {
     const targetId = path.split("#")[1];

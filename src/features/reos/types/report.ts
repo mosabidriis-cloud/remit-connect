@@ -1,4 +1,9 @@
-export type ReportCategory = "VOLUME" | "PERFORMANCE";
+/**
+ * LIQUIDITY is additive (Liquidity Management, LIQUIDITY_MANAGEMENT.md Section 11) - a
+ * genuinely new operational category, not a rename of VOLUME/PERFORMANCE, and does not
+ * touch the still-open Decision D-1 (Operations/Performance/Audit taxonomy).
+ */
+export type ReportCategory = "VOLUME" | "PERFORMANCE" | "LIQUIDITY";
 
 export type ReportType =
   | "SHARED_BATCHES"
@@ -12,7 +17,13 @@ export type ReportType =
   | "PROCESSING_TIME"
   | "RETURN_RATE"
   | "PROOF_COMPLETION"
-  | "WORKLOAD";
+  | "WORKLOAD"
+  | "BRANCH_LIQUIDITY"
+  | "DAILY_CONSUMPTION"
+  | "ACCOUNT_BALANCES"
+  | "LOW_BALANCE_ACCOUNTS"
+  | "LIQUIDITY_EXCEPTIONS"
+  | "FUNDING_HISTORY";
 
 export type ReportFormat = "TABLE";
 
