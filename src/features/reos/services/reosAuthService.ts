@@ -30,14 +30,37 @@ async function loadSessionFromSupabaseUser(userId: string, email: string): Promi
   };
 }
 
+/**
+ * REOS is an internal, username-based portal - staff sign in with their operational
+ * username (profiles.username), not an email address. Supabase Auth's password grant
+ * only accepts email/phone, so the `login-with-username` Edge Function resolves the
+ * username to its real email and performs the actual sign-in server-side (the same
+ * "client can't safely do X" reasoning as `admin-create-user`, AUTHENTICATION.md
+ * Section 4) - this function only ever sees the resulting session tokens, never the
+ * email itself.
+ */
 export async function login(username: string, password: string): Promise<ReosSession> {
-  const { data, error } = await supabase.auth.signInWithPassword({ email: username, password });
+  const { data: tokens, error: invokeError } = await supabase.functions.invoke<{
+    access_token: string;
+    refresh_token: string;
+  }>("login-with-username", {
+    body: { username, password },
+  });
+
+  if (invokeError || !tokens?.access_token || !tokens?.refresh_token) {
+    throw new Error(invokeError?.message ?? "Invalid username or password.");
+  }
+
+  const { data, error } = await supabase.auth.setSession({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+  });
 
   if (error || !data.user) {
     throw new Error(error?.message ?? "Sign-in failed.");
   }
 
-  const session = await loadSessionFromSupabaseUser(data.user.id, data.user.email ?? username);
+  const session = await loadSessionFromSupabaseUser(data.user.id, data.user.email ?? "");
 
   if (!session) {
     throw new Error("Signed in, but no REOS profile exists for this account. Contact an Operations Manager.");

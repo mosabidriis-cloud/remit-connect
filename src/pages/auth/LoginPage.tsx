@@ -67,10 +67,10 @@ export default function LoginPage() {
           </div>
 
           <TextInput
-            label="Email"
+            label="Username"
             value={username}
             onChange={setUsername}
-            placeholder="Enter your email"
+            placeholder="Enter your username"
           />
 
           <TextInput
