@@ -94,6 +94,7 @@ export function BranchProcessingQueue({ actorUserId, assignments, branchId, bran
   const [summary, setSummary] = useState<BranchProcessingQueueSummary>(emptySummary);
   const [canFinalize, setCanFinalize] = useState(false);
   const [eligiblePayoutAccounts, setEligiblePayoutAccounts] = useState<PayoutAccount[]>([]);
+  const [branchPayoutAccountCount, setBranchPayoutAccountCount] = useState<number | null>(null);
   const [selectedPayoutAccount, setSelectedPayoutAccount] = useState<PayoutAccount | null>(null);
 
   useEffect(() => {
@@ -157,11 +158,15 @@ export function BranchProcessingQueue({ actorUserId, assignments, branchId, bran
       if (!selectedItem || selectedItem.payoutAccountId !== null) {
         if (!cancelled) {
           setEligiblePayoutAccounts([]);
+          setBranchPayoutAccountCount(null);
         }
         return;
       }
 
-      const activeAccounts = (await getPayoutAccountsByBranch(branchId)).filter((account) => account.status === "ACTIVE");
+      const branchAccounts = await getPayoutAccountsByBranch(branchId);
+      const activeAccounts = branchAccounts.filter(
+        (account) => account.status === "ACTIVE" && account.currency === selectedItem.beneficiary.currency,
+      );
       const eligible: PayoutAccount[] = [];
 
       for (const account of activeAccounts) {
@@ -175,6 +180,7 @@ export function BranchProcessingQueue({ actorUserId, assignments, branchId, bran
 
       if (!cancelled) {
         setEligiblePayoutAccounts(eligible);
+        setBranchPayoutAccountCount(branchAccounts.length);
       }
     })();
 
@@ -429,7 +435,9 @@ export function BranchProcessingQueue({ actorUserId, assignments, branchId, bran
                   </label>
                   {eligiblePayoutAccounts.length === 0 ? (
                     <div style={{ color: colors.muted, fontSize: typography.small }}>
-                      No active payout account has enough available balance for this transaction.
+                      {branchPayoutAccountCount === 0
+                        ? `${branchName} has no payout accounts on file. An Operations Manager must add one in Liquidity Management before transactions can be processed.`
+                        : `No active ${selectedItem.beneficiary.currency} payout account has enough available balance for this transaction.`}
                     </div>
                   ) : null}
                   <button

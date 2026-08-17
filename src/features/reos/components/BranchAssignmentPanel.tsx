@@ -49,11 +49,6 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
     };
   }, []);
 
-  const selectedBranchAccounts = useMemo(
-    () => payoutAccounts.filter((account) => account.branchId === selectedBranchId),
-    [payoutAccounts, selectedBranchId],
-  );
-
   const pendingReadyTransactions = useMemo(
     () => beneficiaries.filter(
       (beneficiary) => beneficiary.processingStatusId === "READY_FOR_ASSIGNMENT" && !assignedBeneficiaryIds.includes(beneficiary.id),
@@ -93,6 +88,43 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
         Ready transactions will be assigned to the selected branch. Manual review and invalid entries remain in the batch and stay out of the assignment queue.
       </p>
 
+      <div style={{ marginTop: spacing.lg }}>
+        <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Branch Liquidity (DEC-026)</div>
+        <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
+          Current payout account balances per branch - use this to route the batch to a branch that can actually fund it.
+        </div>
+        <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
+          {branchOptions.map((branch) => {
+            const accounts = payoutAccounts.filter((account) => account.branchId === branch.id);
+
+            return (
+              <div
+                key={branch.id}
+                style={{
+                  backgroundColor: branch.id === selectedBranchId ? colors.blue50 : "transparent",
+                  border: `1px solid ${branch.id === selectedBranchId ? colors.primary : colors.border}`,
+                  borderRadius: radius.sm,
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                }}
+              >
+                <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{branch.name}</div>
+                {accounts.length === 0 ? (
+                  <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
+                    No payout accounts on file.
+                  </div>
+                ) : (
+                  <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
+                    {accounts
+                      .map((account) => `${account.bank}: ${account.currency} ${account.currentBalance.toLocaleString()}${account.status === "INACTIVE" ? " (inactive)" : ""}`)
+                      .join(" • ")}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ display: "grid", gap: spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginTop: spacing.lg }}>
         <div>
           <label style={{ color: colors.muted, display: "block", fontSize: typography.caption, fontWeight: 600, marginBottom: spacing.xs, textTransform: "uppercase" }} htmlFor="branch-select">
@@ -111,16 +143,6 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
               </option>
             ))}
           </select>
-          <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
-            {selectedBranchAccounts.length === 0
-              ? "No payout accounts on file for this branch."
-              : selectedBranchAccounts.map((account) => (
-                  <div key={account.id}>
-                    {account.bank} • {account.currency} {account.currentBalance.toLocaleString()}
-                    {account.status === "INACTIVE" ? " (inactive)" : ""}
-                  </div>
-                ))}
-          </div>
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Ready for Assignment</div>
