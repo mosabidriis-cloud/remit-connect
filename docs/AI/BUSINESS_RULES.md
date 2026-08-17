@@ -56,6 +56,7 @@ REOS (Remit Exchange Operations System) is an internal employee-only operations 
 - Views imported transaction data.
 - Uploads one or more proof-of-payment screenshots.
 - Completes transactions.
+- Establishes and maintains their own branch's daily payout account listing - create, edit, enable/disable payout accounts, and record funding received (top-ups) against them (DECISIONS.md DEC-027, reverses DEC-024's OM-only account creation for this own-branch case).
 - Returns transactions.
 - Cannot assign or reassign Shared Batches.
 - Can only view Shared Batches assigned to their branch.

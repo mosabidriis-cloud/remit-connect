@@ -107,7 +107,22 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
                   padding: `${spacing.sm}px ${spacing.md}px`,
                 }}
               >
-                <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{branch.name}</div>
+                <div style={{ alignItems: "baseline", display: "flex", gap: spacing.sm, justifyContent: "space-between" }}>
+                  <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{branch.name}</div>
+                  <div style={{ color: colors.muted, fontSize: typography.caption }}>
+                    {accounts.length} account{accounts.length === 1 ? "" : "s"}
+                    {accounts.length > 0
+                      ? ` • ${Object.entries(
+                          accounts.reduce<Record<string, number>>((totals, account) => {
+                            totals[account.currency] = (totals[account.currency] ?? 0) + account.currentBalance;
+                            return totals;
+                          }, {}),
+                        )
+                          .map(([currency, total]) => `${currency} ${total.toLocaleString()} total`)
+                          .join(", ")}`
+                      : ""}
+                  </div>
+                </div>
                 {accounts.length === 0 ? (
                   <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
                     No payout accounts on file.
