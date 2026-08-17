@@ -66,7 +66,7 @@ export default function AppRoutes() {
           <Route path="reports" element={<RoleGate roles={[...OM]}><ReportsPage /></RoleGate>} />
 
           <Route path="shared-batches/upload" element={<RoleGate roles={[...DRO_OR_OM]}><SharedBatchUploadPage /></RoleGate>} />
-          <Route path="shared-batches/assignment" element={<RoleGate roles={[...OM]}><BranchAssignmentPage /></RoleGate>} />
+          <Route path="shared-batches/assignment" element={<RoleGate roles={[...DRO_OR_OM]}><BranchAssignmentPage /></RoleGate>} />
           <Route path="shared-batches/:batchId/proof-download" element={<RoleGate roles={[...DRO_OR_OM]}><ProofDownloadPage /></RoleGate>} />
 
           <Route path="import-intelligence" element={<RoleGate roles={[...DRO_OR_OM]}><ImportIntelligencePage /></RoleGate>} />

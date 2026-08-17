@@ -37,9 +37,14 @@ export interface ReassignSharedBatchResult {
   audit: SharedBatchReassignmentAudit;
 }
 
+/**
+ * DEC-025: initial assignment is Direct Remit Officer (primary) or Operations Manager
+ * (backup/override) - reversing DEC-014's move of this step to Operations Manager only.
+ * Reassignment below is unaffected - still Operations-Manager-only, per DEC-006.
+ */
 export async function assignSharedBatchToBranch(input: AssignSharedBatchInput): Promise<AssignSharedBatchResult> {
-  if (input.actorRole !== "OPERATIONS_MANAGER") {
-    throw new Error("Only the Operations Manager may assign an unassigned Shared Batch.");
+  if (input.actorRole !== "OPERATIONS_MANAGER" && input.actorRole !== "DIRECT_REMIT_OFFICER") {
+    throw new Error("Only the Direct Remit Officer or Operations Manager may assign an unassigned Shared Batch.");
   }
 
   if (input.sharedBatch.assignmentStatus === "ASSIGNED" || input.sharedBatch.isLocked) {

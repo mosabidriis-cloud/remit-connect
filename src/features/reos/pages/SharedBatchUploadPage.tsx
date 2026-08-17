@@ -320,7 +320,7 @@ export function SharedBatchUploadPage() {
           ) : null}
           {isConfirmed && sharedBatch ? (
             <div style={{ marginTop: spacing.lg }}>
-              {session?.role === "OPERATIONS_MANAGER" ? (
+              {session?.role === "OPERATIONS_MANAGER" || session?.role === "DIRECT_REMIT_OFFICER" ? (
                 <BranchAssignmentPanel
                   assignment={assignment}
                   assignments={assignments}
@@ -366,11 +366,11 @@ export function SharedBatchUploadPage() {
                   sharedBatch={sharedBatch}
                 />
               ) : (
-                // AUTHENTICATION.md Section 7: Assignment is Operations-Manager-only (DEC-014).
-                // A Direct Remit Officer reaching this page after upload sees a status note, not
-                // an actionable control they're not authorized to submit.
+                // DEC-025: initial assignment is Direct Remit Officer or Operations Manager -
+                // every role that reaches this page (shared-batches/upload is DRO_OR_OM-gated)
+                // takes the branch above. Kept as a defensive fallback, not a reachable path.
                 <div style={{ backgroundColor: colors.blue50, border: "1px solid #BFDBFE", borderRadius: radius.sm, color: colors.blue700, fontSize: typography.small, padding: spacing.md }}>
-                  This batch is ready for assignment. An Operations Manager will assign it to a branch via{" "}
+                  This batch is ready for assignment. It can be assigned to a branch via{" "}
                   <Link style={{ color: colors.blue700, fontWeight: 600 }} to="/reos/shared-batches/assignment">
                     Branch Assignment
                   </Link>
