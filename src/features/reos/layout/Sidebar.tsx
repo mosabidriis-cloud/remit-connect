@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import Badge from "../../../components/ui/Badge";
 import { colors, radius, shadows, spacing, typography } from "../theme";
+import { useReosSession } from "./reosAuthContext";
 import { LogoPlaceholder } from "./LogoPlaceholder";
-import { sidebarSections } from "./sidebarConfig";
+import { getVisibleSidebarSections } from "./sidebarConfig";
 
 type SidebarProps = {
   collapsed: boolean;
@@ -10,6 +11,11 @@ type SidebarProps = {
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const location = useLocation();
+  const { session } = useReosSession();
+
+  // Sidebar only renders inside ReosSessionGate, which already redirects to /login
+  // when there is no session - this is a defensive fallback, not the real guard.
+  const sidebarSections = session ? getVisibleSidebarSections(session.role) : [];
 
   return (
     <aside
