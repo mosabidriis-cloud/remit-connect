@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import { getAllBranches } from "../services/branchRegistryService";
 
 export type BranchAssignmentFormValues = {
   branchId: string;
@@ -8,6 +9,8 @@ export type BranchAssignmentFormValues = {
 type BranchAssignmentFormProps = {
   onSubmit: (values: BranchAssignmentFormValues) => void;
 };
+
+const branches = getAllBranches();
 
 export function BranchAssignmentForm({ onSubmit }: BranchAssignmentFormProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -23,7 +26,21 @@ export function BranchAssignmentForm({ onSubmit }: BranchAssignmentFormProps) {
   return (
     <form className="grid gap-4 rounded border border-slate-200 bg-white p-6" onSubmit={handleSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Destination Branch ID" name="branchId" required />
+        <label className="grid gap-1 text-sm font-medium text-slate-700">
+          Destination Branch
+          <select
+            className="rounded border border-slate-300 px-3 py-2"
+            defaultValue={branches[0]?.id ?? ""}
+            name="branchId"
+            required
+          >
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Reassignment Reason
@@ -35,22 +52,5 @@ export function BranchAssignmentForm({ onSubmit }: BranchAssignmentFormProps) {
         </button>
       </div>
     </form>
-  );
-}
-
-type FieldProps = {
-  label: string;
-  name: string;
-  required?: boolean;
-  type?: string;
-  min?: number;
-};
-
-function Field({ label, name, required, type = "text", min }: FieldProps) {
-  return (
-    <label className="grid gap-1 text-sm font-medium text-slate-700">
-      {label}
-      <input className="rounded border border-slate-300 px-3 py-2" min={min} name={name} required={required} type={type} />
-    </label>
   );
 }

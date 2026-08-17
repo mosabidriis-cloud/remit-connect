@@ -42,6 +42,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
             <div className="grid gap-1.5">
               {section.items.map((item) => {
                 const active = item.match.test(location.pathname);
+                const href = item.href.replace("BRANCH_ID", session?.branchId ?? "");
 
                 return (
                   <Link
@@ -59,7 +60,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                       boxShadow: active ? shadows.sm : "none",
                     }}
                     title={collapsed ? item.label : undefined}
-                    to={item.href}
+                    to={href}
                   >
                     <span
                       className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-400 transition-opacity duration-200 ${

@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getAllBranches } from "../services/branchRegistryService";
+import { getAllPayoutAccounts } from "../services/liquidityService";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
+import type { PayoutAccount } from "../types/liquidity";
 import type { SharedBatch } from "../types/sharedBatch";
 
 type BranchAssignmentPanelProps = {
@@ -15,15 +18,41 @@ type BranchAssignmentPanelProps = {
   isReadOnly?: boolean;
 };
 
-const branchOptions = [
-  { id: "PORT_SUDAN", label: "Port Sudan Branch" },
-  { id: "KASSALA", label: "Kassala Branch" },
-  { id: "DONGOLA", label: "Dongola Branch" },
-  { id: "KOSTI", label: "Kosti Branch" },
-];
+const branchOptions = getAllBranches();
 
 export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, assignments, assignedBeneficiaryIds, onConfirm, isAssignmentConfirmed, isReadOnly = false }: BranchAssignmentPanelProps) {
-  const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0].id);
+  const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0]?.id ?? "");
+  const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccount[]>([]);
+
+  // DEC-026: Direct Remit Officer (and Operations Manager, unchanged) can now read
+  // payout_accounts, so this liquidity snapshot is available wherever this panel is
+  // rendered. A failed fetch is non-blocking - it degrades to an empty snapshot rather
+  // than stopping assignment, the same "read-only view, not on the critical path"
+  // treatment other optional panels get elsewhere in REOS.
+  useEffect(() => {
+    let cancelled = false;
+
+    getAllPayoutAccounts()
+      .then((accounts) => {
+        if (!cancelled) {
+          setPayoutAccounts([...accounts]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPayoutAccounts([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedBranchAccounts = useMemo(
+    () => payoutAccounts.filter((account) => account.branchId === selectedBranchId),
+    [payoutAccounts, selectedBranchId],
+  );
 
   const pendingReadyTransactions = useMemo(
     () => beneficiaries.filter(
@@ -78,10 +107,20 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
           >
             {branchOptions.map((branch) => (
               <option key={branch.id} value={branch.id}>
-                {branch.label}
+                {branch.name}
               </option>
             ))}
           </select>
+          <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
+            {selectedBranchAccounts.length === 0
+              ? "No payout accounts on file for this branch."
+              : selectedBranchAccounts.map((account) => (
+                  <div key={account.id}>
+                    {account.bank} • {account.currency} {account.currentBalance.toLocaleString()}
+                    {account.status === "INACTIVE" ? " (inactive)" : ""}
+                  </div>
+                ))}
+          </div>
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Ready for Assignment</div>

@@ -18,6 +18,7 @@ import { ValidationErrors } from "../components/ValidationErrors";
 import { ValidationSummary } from "../components/ValidationSummary";
 import { recordAuditEvent } from "../services/auditService";
 import { assignSharedBatchToBranch } from "../services/branchAssignmentService";
+import { getBranchById } from "../services/branchRegistryService";
 import { validateExcelUpload } from "../services/excelValidationService";
 import {
   checkForDuplicateImport,
@@ -341,7 +342,7 @@ export function SharedBatchUploadPage() {
                       sharedBatch,
                       beneficiaries: remainingReadyTransactions,
                       branchId,
-                      branchName: branchId === "PORT_SUDAN" ? "Port Sudan Branch" : branchId,
+                      branchName: getBranchById(branchId)?.name ?? branchId,
                       assignedByUserId: session.userId,
                       actorRole: session.role,
                     });

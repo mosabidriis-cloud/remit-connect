@@ -9,6 +9,7 @@ import {
   getSharedBatchesVisibleToBranchOfficer,
   reassignSharedBatch,
 } from "../services/branchAssignmentService";
+import { getBranchById } from "../services/branchRegistryService";
 import { getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
 import { useReosSession } from "../layout/reosAuthContext";
 import { colors, radius, spacing, typography } from "../theme";
@@ -62,7 +63,7 @@ export function BranchAssignmentPage() {
         throw new Error("Select an uploaded Shared Batch before assigning.");
       }
 
-      const branchName = values.branchId === "PORT_SUDAN" ? "Port Sudan Branch" : values.branchId;
+      const branchName = getBranchById(values.branchId)?.name ?? values.branchId;
 
       if (batch.assignmentStatus === "ASSIGNED") {
         if (!assignment) {

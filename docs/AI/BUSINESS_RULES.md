@@ -40,6 +40,7 @@ REOS (Remit Exchange Operations System) is an internal employee-only operations 
 - Validates uploaded batches.
 - Creates Shared Batches.
 - Assigns Shared Batches to branches - initial assignment only (DECISIONS.md DEC-025, reverses DEC-014's move of this step to Operations Manager).
+- Views current branch payout account balances/liquidity positions, read-only, to inform branch assignment routing (DECISIONS.md DEC-026).
 - Views completed batches.
 - Downloads proof-of-payment files.
 - Uploads proofs back to Direct Remit.

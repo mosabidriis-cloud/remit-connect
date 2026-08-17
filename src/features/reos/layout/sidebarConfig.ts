@@ -15,7 +15,7 @@ import type { ReosUserRole } from "../types/user";
  */
 const OM: ReosUserRole[] = ["OPERATIONS_MANAGER"];
 const DRO_OR_OM: ReosUserRole[] = ["DIRECT_REMIT_OFFICER", "OPERATIONS_MANAGER"];
-const BRANCH_OFFICER_OR_OM: ReosUserRole[] = ["BRANCH_OFFICER", "OPERATIONS_MANAGER"];
+const BRANCH_OFFICER: ReosUserRole[] = ["BRANCH_OFFICER"];
 
 export type SidebarItem = {
   label: string;
@@ -46,10 +46,15 @@ export const sidebarSections: SidebarSection[] = [
         roles: OM,
       },
       {
+        // `BRANCH_ID` is a placeholder resolved by Sidebar.tsx to the signed-in Branch
+        // Officer's own session.branchId - this item only makes sense for a role tied to
+        // exactly one branch. Operations Manager reaches Branch Processing contextually,
+        // via BranchProcessingNavigation links generated from real assignment/upload data
+        // (each with a concrete branchId), not a static sidebar entry.
         label: "Branch Processing",
         href: "/reos/branches/BRANCH_ID/processing",
         match: /^\/reos\/branches\/[^/]+\/processing$/,
-        roles: BRANCH_OFFICER_OR_OM,
+        roles: BRANCH_OFFICER,
       },
     ],
   },
