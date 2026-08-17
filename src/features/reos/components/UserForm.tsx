@@ -101,8 +101,8 @@ export function UserForm({ initialUser, mode, submitLabel, onSubmit }: UserFormP
           <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.branchId ?? ""} name="branchId" />
         </label>
         <label className="grid gap-1 text-sm font-medium text-slate-700">
-          Account
-          <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.account} name="account" required />
+          Position/Title (optional)
+          <input className="rounded border border-slate-300 px-3 py-2" defaultValue={initialUser?.account} name="account" />
         </label>
         <label className="grid gap-1 text-sm font-medium text-slate-700">
           Status
