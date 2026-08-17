@@ -9,7 +9,13 @@
  * once imported.
  */
 
-export type ImportSource = "DIRECT_REMIT" | "WESTERN_UNION" | "RIA" | "MONEYGRAM" | "TERRAPAY";
+/**
+ * Direct Remit is the only source REOS ever imports from (DEC-029 narrows this from the
+ * wider DEC-016 union - see DECISIONS.md). The `import_batches.source` column in Supabase
+ * still permits the other network values at the schema level, preserving DEC-016's
+ * "additive later, not a redesign" intent if multi-source ingestion is ever approved.
+ */
+export type ImportSource = "DIRECT_REMIT";
 
 export type ImportDuplicateStatus = "UNIQUE" | "REPLACED" | "MERGED";
 

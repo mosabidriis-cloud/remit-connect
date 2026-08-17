@@ -8,7 +8,7 @@ import { colors, radius, spacing, typography } from "../theme";
 import type { CoverageCell, CoverageCellStatus, CoverageYearGroup } from "../types/operationalDataset";
 import type { ImportSource } from "../types/importIntelligence";
 
-const SOURCE_ORDER: ImportSource[] = ["DIRECT_REMIT", "WESTERN_UNION", "RIA", "MONEYGRAM", "TERRAPAY"];
+const SOURCE_ORDER: ImportSource[] = ["DIRECT_REMIT"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const statusPresentation: Record<CoverageCellStatus, { label: string; symbol: string; color: string }> = {
@@ -21,8 +21,8 @@ const statusPresentation: Record<CoverageCellStatus, { label: string; symbol: st
 /**
  * Data Coverage: Year -> Month -> Source, generated entirely from the Import Ledger via
  * operationalDatasetService.getCoverageMatrix() (IMPORT_INTELLIGENCE.md Section 13).
- * Only DIRECT_REMIT is ever populated - the other four sources render as permanently
- * MISSING, honestly, since REOS has never imported anything from them.
+ * Direct Remit is the only source REOS imports from (DEC-029) - the matrix has a single
+ * source column as a result.
  */
 export function DataCoveragePage() {
   const [years, setYears] = useState<CoverageYearGroup[] | null>(null);

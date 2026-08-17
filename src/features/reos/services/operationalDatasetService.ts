@@ -27,7 +27,7 @@ import type {
  * decision, 2026-08-08; see CURRENT_SPRINT.md and IMPORT_INTELLIGENCE.md Section 13).
  */
 
-const ALL_SOURCES: ImportSource[] = ["DIRECT_REMIT", "WESTERN_UNION", "RIA", "MONEYGRAM", "TERRAPAY"];
+const ALL_SOURCES: ImportSource[] = ["DIRECT_REMIT"];
 
 /**
  * Data Coverage as Year -> Month -> Source. A cell's status is derived strictly from

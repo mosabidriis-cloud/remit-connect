@@ -10,7 +10,7 @@ import { colors, radius, spacing, typography } from "../theme";
 import type { ImportDuplicateStatus, ImportSource } from "../types/importIntelligence";
 import type { ImportHistoryEntry } from "../types/operationalDataset";
 
-const SOURCE_OPTIONS: ImportSource[] = ["DIRECT_REMIT", "WESTERN_UNION", "RIA", "MONEYGRAM", "TERRAPAY"];
+const SOURCE_OPTIONS: ImportSource[] = ["DIRECT_REMIT"];
 const STATUS_OPTIONS: ImportDuplicateStatus[] = ["UNIQUE", "REPLACED", "MERGED"];
 
 const statusTone: Record<ImportDuplicateStatus, string> = {

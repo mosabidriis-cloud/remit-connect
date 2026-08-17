@@ -1,11 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginPage from "../pages/auth/LoginPage";
-import Dashboard from "../pages/controller/Dashboard";
-import SharedBatchListPage from "../pages/shared-batches/SharedBatchListPage";
-import SharedBatchDetailsPage from "../pages/shared-batches/SharedBatchDetailsPage";
-import CreditAccountWorkspacePage from "../pages/credit-account/CreditAccountWorkspacePage";
-import CreditAccountBatchViewPage from "../pages/credit-account/CreditAccountBatchViewPage";
 import { ReosAuthProviderOutlet } from "../features/reos/layout/ReosAuthProvider";
 import { BranchGate, ReosChangePasswordGate, ReosIndexRedirect, ReosSessionGate, RoleGate } from "../features/reos/layout/RouteGuards";
 import { BranchAssignmentPage } from "../features/reos/pages/BranchAssignmentPage";
@@ -38,15 +33,6 @@ export default function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
-
-      <Route path="/operations-command" element={<Dashboard />} />
-      <Route path="/shared-batches" element={<SharedBatchListPage />} />
-      <Route path="/shared-batches/:batchId" element={<SharedBatchDetailsPage />} />
-      <Route path="/credit-account" element={<CreditAccountWorkspacePage />} />
-      <Route
-        path="/credit-account/batches/:batchId"
-        element={<CreditAccountBatchViewPage />}
-      />
 
       {/* One ReosAuthProvider for the whole /reos subtree - not re-fetched per navigation. */}
       <Route element={<ReosAuthProviderOutlet />}>
@@ -87,11 +73,6 @@ export default function AppRoutes() {
           <Route path="administration/users/:userId/edit" element={<RoleGate roles={[...OM]}><UserEditPage /></RoleGate>} />
         </Route>
       </Route>
-
-      <Route
-        path="/controller/dashboard"
-        element={<Navigate to="/operations-command" replace />}
-      />
 
       <Route path="*" element={<h1>404 - Page Not Found</h1>} />
     </Routes>

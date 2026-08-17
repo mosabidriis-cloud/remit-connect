@@ -117,7 +117,7 @@ REOS is an isolated feature module under `src/features/reos`. It owns its own ty
 
 It does **not** own, by default: Supabase project configuration, application layout outside REOS, Direct Remit's own data. One standing exception: REOS now owns its own authentication integration end to end (`reosAuthService.ts`, `profiles` table, route guards) rather than reusing the legacy, pre-existing `src/services/authService.ts` — that legacy file is a different, non-REOS auth path with a different role vocabulary and is **not** used by REOS (see Section 5 for a related security finding).
 
-A second, entirely separate legacy application tree exists outside `src/features/reos` (`src/pages/branches`, `treasury`, `funding`, `auth`, `credit-account`, `controller`, `shared-batches`) — pre-existing, not built by REOS, and only partially investigated in this handover. Treat it as foreign territory until proven otherwise for each directory.
+A second, entirely separate legacy application tree previously existed outside `src/features/reos` (`src/pages/branches`, `treasury`, `funding`, `auth`, `credit-account`, `controller`, `shared-batches`) — pre-existing, not built by REOS. **Fully retired 2026-08-17 (DECISIONS.md DEC-030)**: every file in that tree, plus the routes reaching it, is deleted; `tsc`/`build` both clean.
 
 ### Persistence Boundary
 
@@ -202,7 +202,7 @@ An RC1 Product Readiness Review was completed the same day this handover was pre
 | Item | What needs deciding |
 |---|---|
 | `branch_processing_status` one-way lock | Once a branch finalizes to `COMPLETED`, nothing ever resets it to `PROCESSING`. Whether that is correct depends on REOS's real operating cadence (one batch ever vs. recurring cycles) — this has been carried as open debt across three persistence milestones without being escalated as a business decision. Escalate it. |
-| Legacy Treasury/Funding/Branches tree | A complete, separate, unreconciled system answering the same "can this branch pay out" question as Liquidity Management, still present and reachable in the running app. Retire it, or formally re-scope it as a distinct surface — do not leave it in limbo. |
+| ~~Legacy Treasury/Funding/Branches tree~~ | **RESOLVED (DEC-023, DEC-030):** fully retired and deleted, not re-scoped. |
 | `payout_accounts` INSERT policy | Broader than the UI's own intent, as a consequence of Postgres upsert mechanics (a Branch Officer can, via a crafted request, create a payout account for their own branch — something only the UI restricts to Operations Manager). Currently accepted as low-risk for a single-tenant internal app; get that acceptance in writing from whoever owns security sign-off, or tighten it. |
 | Seven open Decisions (D-1, D-2, D-3, D-7, D-8, D-9, and half of D-6) | Report-category taxonomy, Executive/Branch dashboards, disabled exports, branch registry completeness, the unapproved `GENERAL_MANAGER` role, dead financial dashboard columns, and remaining Performance report definitions. Full detail in `DECISIONS.md` and `PROJECT_STATE.md`'s "Active Constraints" section. |
 
