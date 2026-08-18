@@ -67,14 +67,18 @@ export default function LoginPage() {
           </div>
 
           <TextInput
+            autoComplete="off"
             label="Username"
+            name="reos-username"
             value={username}
             onChange={setUsername}
             placeholder="Enter your username"
           />
 
           <TextInput
+            autoComplete="new-password"
             label="Password"
+            name="reos-password"
             type="password"
             value={password}
             onChange={setPassword}

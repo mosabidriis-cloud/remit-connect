@@ -12,12 +12,49 @@ export function UserDetailsPage() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (userId) {
-      void getUserById(userId).then(setUser);
-    }
+    let cancelled = false;
+
+    (async () => {
+      await Promise.resolve();
+
+      if (!userId) {
+        if (!cancelled) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setLoading(true);
+      }
+
+      const result = await getUserById(userId);
+
+      if (!cancelled) {
+        setUser(result);
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader
+          description="View an internal REOS user account."
+          title="User Details"
+        />
+        <EmptyState message="Loading user..." />
+      </PageContainer>
+    );
+  }
 
   if (!user) {
     return (

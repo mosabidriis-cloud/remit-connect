@@ -6,6 +6,8 @@ type TextInputProps = {
   placeholder?: string;
   type?: string;
   onChange: (value: string) => void;
+  autoComplete?: string;
+  name?: string;
 };
 
 export default function TextInput({
@@ -14,6 +16,8 @@ export default function TextInput({
   placeholder,
   type = "text",
   onChange,
+  autoComplete,
+  name,
 }: TextInputProps) {
   return (
     <div
@@ -35,6 +39,8 @@ export default function TextInput({
       </label>
 
       <input
+        autoComplete={autoComplete}
+        name={name}
         type={type}
         value={value}
         placeholder={placeholder}

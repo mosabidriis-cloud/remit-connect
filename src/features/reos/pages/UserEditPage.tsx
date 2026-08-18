@@ -13,12 +13,37 @@ export function UserEditPage() {
   const { userId } = useParams();
   const { session } = useReosSession();
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) {
-      void getUserById(userId).then(setUser);
-    }
+    let cancelled = false;
+
+    (async () => {
+      await Promise.resolve();
+
+      if (!userId) {
+        if (!cancelled) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setLoading(true);
+      }
+
+      const result = await getUserById(userId);
+
+      if (!cancelled) {
+        setUser(result);
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   const handleSubmit = (values: UserFormValues) => {
@@ -40,6 +65,18 @@ export function UserEditPage() {
       })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to update user."));
   };
+
+  if (loading) {
+    return (
+      <PageContainer>
+        <PageHeader
+          description="Update an internal REOS user account."
+          title="Edit User"
+        />
+        <EmptyState message="Loading user..." />
+      </PageContainer>
+    );
+  }
 
   if (!user) {
     return (

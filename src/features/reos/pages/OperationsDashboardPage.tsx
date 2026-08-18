@@ -91,8 +91,8 @@ export function OperationsDashboardPage() {
             <div>Updated {formatDateTime(dashboard?.generatedAt ?? new Date().toISOString())}</div>
           </div>
         }
-        description="What requires the Operations Manager's attention right now?"
-        title="Operations Command Center"
+        description="Branch performance, work queue, and exceptions requiring attention."
+        title="Operations Dashboard"
       />
 
       {error ? (
