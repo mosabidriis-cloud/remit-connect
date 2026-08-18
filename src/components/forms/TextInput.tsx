@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { forwardRef, type ChangeEvent } from "react";
 
 type TextInputProps = {
   label: string;
@@ -10,15 +10,10 @@ type TextInputProps = {
   name?: string;
 };
 
-export default function TextInput({
-  label,
-  value,
-  placeholder,
-  type = "text",
-  onChange,
-  autoComplete,
-  name,
-}: TextInputProps) {
+const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
+  { label, value, placeholder, type = "text", onChange, autoComplete, name },
+  ref,
+) {
   return (
     <div
       style={{
@@ -41,6 +36,7 @@ export default function TextInput({
       <input
         autoComplete={autoComplete}
         name={name}
+        ref={ref}
         type={type}
         value={value}
         placeholder={placeholder}
@@ -59,4 +55,6 @@ export default function TextInput({
       />
     </div>
   );
-}
+});
+
+export default TextInput;

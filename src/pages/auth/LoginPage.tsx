@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -11,6 +11,36 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Chrome (and other browsers) can inject an autofilled value directly into the input's
+  // DOM node without going through React's onChange - autoComplete="off" is not reliably
+  // honored for username/password fields by design, so React's own state can genuinely be
+  // "" while the field visibly shows a stale saved credential. Explicitly wipe both state
+  // and the raw DOM value on mount, and again after a short delay - autofill sometimes
+  // injects a beat after the initial paint, not synchronously with it.
+  useEffect(() => {
+    const clearFields = () => {
+      setUsername("");
+      setPassword("");
+
+      if (usernameRef.current) {
+        usernameRef.current.value = "";
+      }
+
+      if (passwordRef.current) {
+        passwordRef.current.value = "";
+      }
+    };
+
+    clearFields();
+    const timeoutId = setTimeout(clearFields, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   async function handleLogin() {
     setError(null);
@@ -70,6 +100,7 @@ export default function LoginPage() {
             autoComplete="off"
             label="Username"
             name="reos-username"
+            ref={usernameRef}
             value={username}
             onChange={setUsername}
             placeholder="Enter your username"
@@ -79,6 +110,7 @@ export default function LoginPage() {
             autoComplete="new-password"
             label="Password"
             name="reos-password"
+            ref={passwordRef}
             type="password"
             value={password}
             onChange={setPassword}
