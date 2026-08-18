@@ -165,6 +165,7 @@ export async function projectProcessing(scope: ProjectionScope): Promise<readonl
       accountNumber: item.beneficiary.accountNumber,
 
       queueStatus: item.status,
+      createdAt: item.createdAt,
 
       startedAt: item.startedAt,
       completedAt: item.completedAt,

@@ -425,12 +425,19 @@ function countLifecycle(
   return batches.filter((batch) => batch.lifecycleStatus === status).length;
 }
 
+/**
+ * "Delayed" is measured from when the transaction entered this branch's processing
+ * queue (createdAt), not from transactionDate - the underlying remittance's real-world
+ * date, which is set at the original transaction and is almost always already hours or
+ * days old by the time REOS ever sees it. Using transactionDate here counted nearly
+ * every non-terminal queue item as delayed regardless of actual REOS queue age.
+ */
 function getDelayedPayoutCount(processing: readonly ProcessingReportProjection[], now: Date): number {
   return processing.filter(
     (transaction) =>
       transaction.queueStatus !== "COMPLETED" &&
       transaction.queueStatus !== "RETURNED" &&
-      getAgeMinutes(transaction.transactionDate, now) > delayedPayoutMinutes,
+      getAgeMinutes(transaction.createdAt, now) > delayedPayoutMinutes,
   ).length;
 }
 

@@ -170,6 +170,9 @@ export interface ProcessingReportProjection extends Record<string, unknown> {
 
   readonly queueStatus: BranchProcessingQueueStatus;
 
+  /** When this item entered the branch's processing queue - not the same as transactionDate, which is the underlying remittance's real-world date. */
+  readonly createdAt: string;
+
   /**
    * Timestamps and actor attribution (Decision D-6, unblocked). startedAt is set once,
    * on the first transition into IN_PROGRESS - resuming from ON_HOLD does not reset it.

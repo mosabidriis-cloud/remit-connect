@@ -42,6 +42,8 @@ export interface BranchProcessingQueueItem {
   proofs: ProofOfPayment[];
   returnReason: ReturnReason | null;
   returnComment: string | null;
+  /** When this item entered the branch's processing queue (row creation, ASSIGNED). */
+  createdAt: string;
   /** Set once, on the first ASSIGNED/ON_HOLD -> IN_PROGRESS transition. Never reset. */
   startedAt: string | null;
   completedAt: string | null;
@@ -675,6 +677,7 @@ function mapRowToQueueItem(row: QueueItemRow, beneficiary: Beneficiary, proofs: 
     proofs,
     returnReason: defaultReturnReasons.find((reason) => reason.id === row.return_reason_id) ?? null,
     returnComment: row.return_comment,
+    createdAt: row.created_at,
     startedAt: row.started_at,
     completedAt: row.completed_at,
     completedByUserId: row.completed_by_user_id,
