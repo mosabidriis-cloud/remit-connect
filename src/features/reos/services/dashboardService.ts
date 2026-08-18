@@ -31,11 +31,14 @@ import type {
  * every dashboard component renders exactly as before - no widget, card, chart or style
  * was altered. Only where the numbers come from changed.
  *
- * One category of value is deliberately not produced here:
- * - Financial metrics (USD value, revenue). REPORTING_STANDARDS.md places them out of
- *   scope, and the projection layer carries no aggregate amounts by design. The fields
- *   remain in the view model at 0 because removing them is Decision D-9 and would require
- *   changing components, which is out of this milestone's scope.
+ * One category of value is still deliberately not produced here:
+ * - The top KPI section's "USD Value Today" and "Revenue Today" stats (Decision D-9)
+ *   remain hardcoded to 0 and hidden by OperationsDashboardPage's visibleStats filter -
+ *   REPORTING_STANDARDS.md places revenue/margin figures out of scope, and D-9 itself is
+ *   still open. Today Summary's "SDG Processed" card is different: it sums the
+ *   transaction-level `amount` field (an operational volume figure, not a financial one -
+ *   see getSdgProcessedAmount), the same category of aggregate DEC-015 already approved
+ *   for Liquidity Management. "Revenue" was removed from Today Summary outright, per D-9.
  *
  * Duration metrics (processing speed, Decision D-6) are no longer blocked: Branch
  * Processing now records startedAt/completedAt, and reportingProjectionService computes
@@ -115,6 +118,7 @@ export function buildOperationsDashboard(
     exceptions,
     todaySummary: buildTodaySummary({
       transactionsProcessed: completedToday.length,
+      sdgProcessed: getSdgProcessedAmount(completedToday),
       averageProcessingTime,
       branchPerformance,
       returnRate: getRate(returnedTransactions.length, processing.length),
@@ -292,6 +296,7 @@ function buildExceptions(input: {
 
 function buildTodaySummary(input: {
   transactionsProcessed: number;
+  sdgProcessed: number;
   averageProcessingTime: number | null;
   branchPerformance: BranchPerformanceRow[];
   returnRate: number;
@@ -301,8 +306,7 @@ function buildTodaySummary(input: {
 
   return [
     { label: "Transactions Processed", value: input.transactionsProcessed.toString(), detail: "Completed today" },
-    { label: "USD Processed", value: formatCurrency(0), detail: "Completed value today" },
-    { label: "Revenue", value: formatCurrency(0), detail: "Revenue from processed value" },
+    { label: "SDG Processed", value: formatSdgAmount(input.sdgProcessed), detail: "Total SDG amount completed today" },
     { label: "Average Processing Time", value: formatMinutes(input.averageProcessingTime), detail: "Completed transactions today" },
     { label: "Branch Ranking", value: topBranch, detail: "Highest current workload" },
     { label: "Return Rate", value: `${input.returnRate.toFixed(1)}%`, detail: "Returned transactions over total tracked" },
@@ -442,6 +446,22 @@ function getDelayedPayoutCount(processing: readonly ProcessingReportProjection[]
 }
 
 /**
+ * Total SDG value of today's completed transactions, for the Today Summary "SDG
+ * Processed" card. Unlike usdValue/revenue elsewhere on this dashboard, this is not a
+ * financial-reporting figure (REPORTING_STANDARDS.md's revenue/margin/commission
+ * exclusion) - it sums the transaction-level `amount` field the same way Liquidity
+ * Management's consumptionToday already does (DEC-015), to answer an operational
+ * question ("how much SDG moved today"), not a profitability one. Only SDG-denominated
+ * transactions count, since a USD-denominated transaction summed into an SDG total would
+ * misstate the figure.
+ */
+function getSdgProcessedAmount(completedToday: readonly ProcessingReportProjection[]): number {
+  return completedToday
+    .filter((transaction) => transaction.currency === "SDG")
+    .reduce((total, transaction) => total + transaction.amount, 0);
+}
+
+/**
  * Enterprise-wide average processing time (Decision D-6, unblocked). processingMinutes
  * is already computed per transaction by reportingProjectionService, called here rather
  * than recomputed - this function only averages what the projection layer supplies.
@@ -496,4 +516,13 @@ function formatCurrency(value: number): string {
 
 function formatMinutes(value: number | null): string {
   return value === null ? "No data" : `${Math.round(value)} min`;
+}
+
+/**
+ * "SDG" has no widely-supported currency symbol across browser Intl implementations, so
+ * style: "currency" would inconsistently fall back to the raw ISO code anyway. Formatting
+ * the number and appending "SDG" explicitly is the reliable option.
+ */
+function formatSdgAmount(value: number): string {
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value)} SDG`;
 }
