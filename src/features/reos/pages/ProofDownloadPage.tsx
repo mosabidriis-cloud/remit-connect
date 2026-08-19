@@ -161,7 +161,7 @@ export function ProofDownloadPage() {
     return (
       <PageContainer>
         <PageHeader
-          description="Open a completed Shared Batch to view its download summary."
+          description="Open an assigned Shared Batch to view completed transactions and download proofs as they finish."
           title="Proof Download"
         />
         <EmptyState message="Loading..." />
@@ -173,10 +173,10 @@ export function ProofDownloadPage() {
     return (
       <PageContainer>
         <PageHeader
-          description="Open a completed Shared Batch to view its download summary."
+          description="Open an assigned Shared Batch to view completed transactions and download proofs as they finish."
           title="Proof Download"
         />
-        <EmptyState message="No completed batch is selected for proof download." />
+        <EmptyState message="No assigned batch is selected for proof download." />
       </PageContainer>
     );
   }
@@ -184,7 +184,7 @@ export function ProofDownloadPage() {
   return (
     <PageContainer>
       <PageHeader
-        description="Download proof-of-payment files for completed Shared Batches."
+        description="Download proof-of-payment files as transactions complete - no need to wait for the whole batch."
         title="Proof Download"
       />
       {!actorCanDownload ? (
@@ -202,8 +202,12 @@ export function ProofDownloadPage() {
         onDownloadZip={handleDownloadZip}
         onConfirmDownloaded={handleConfirmDownloaded}
       />
+      {/* Individual proofs are available as soon as their own transaction completes -
+          downloadableProofs is already filtered to COMPLETED transactions only
+          (proofDownloadService.getDownloadableProofs), independent of whether the rest
+          of the batch, or the batch's own lifecycleStatus, has finished yet. */}
       <ProofDownloadPanel
-        actorCanDownload={actorCanDownload && batch.lifecycleStatus === "READY_FOR_DOWNLOAD"}
+        actorCanDownload={actorCanDownload}
         proofs={downloadableProofs}
         onDownloadProof={handleDownloadProof}
       />

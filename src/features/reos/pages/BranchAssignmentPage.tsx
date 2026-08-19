@@ -1,40 +1,36 @@
 import { useEffect, useState } from "react";
-import { BranchAssignedBatchView } from "../components/BranchAssignedBatchView";
-import { BranchAssignmentForm, type BranchAssignmentFormValues } from "../components/BranchAssignmentForm";
-import { BranchAssignmentStatus } from "../components/BranchAssignmentStatus";
+import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
-import {
-  assignSharedBatchToBranch,
-  getSharedBatchesVisibleToBranchOfficer,
-  reassignSharedBatch,
-} from "../services/branchAssignmentService";
+import { recordAuditEvent } from "../services/auditService";
+import { assignSharedBatchToBranch } from "../services/branchAssignmentService";
 import { getBranchById } from "../services/branchRegistryService";
 import { deleteSharedBatch, getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
-import { recordAuditEvent } from "../services/auditService";
 import { useReosSession } from "../layout/reosAuthContext";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
-import type { SharedBatchReassignmentAudit } from "../types/branchAssignment";
+import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
 export function BranchAssignmentPage() {
   const { session } = useReosSession();
-  const [sharedBatch, setSharedBatch] = useState<SharedBatch | null>(null);
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [audit, setAudit] = useState<SharedBatchReassignmentAudit | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [unassignedBatches, setUnassignedBatches] = useState<SharedBatch[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<SharedBatch | null>(null);
+  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<Beneficiary[]>([]);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [isAssignmentFinalized, setIsAssignmentFinalized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [unassignedError, setUnassignedError] = useState<string | null>(null);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Real, uploaded Shared Batches waiting for their initial assignment. Re-fetched after
-  // every successful assign/reassign (refreshSignal) so the just-assigned batch drops
-  // out of the list immediately, the same real-time behavior the in-memory store gave
-  // for free before this page's data moved to Supabase.
+  // every successful assignment (refreshSignal) so the just-assigned batch drops out of
+  // the worklist immediately - selectedBatch is a separate piece of state so the panel
+  // below keeps showing that batch's now-locked result instead of disappearing the
+  // moment it falls out of this list.
   useEffect(() => {
     let cancelled = false;
 
@@ -46,7 +42,7 @@ export function BranchAssignmentPage() {
       })
       .catch((cause: unknown) => {
         if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : "Unable to load uploaded Shared Batches.");
+          setUnassignedError(cause instanceof Error ? cause.message : "Unable to load uploaded Shared Batches.");
         }
       });
 
@@ -55,70 +51,45 @@ export function BranchAssignmentPage() {
     };
   }, [refreshSignal]);
 
-  const visibleBatches = getSharedBatchesVisibleToBranchOfficer(sharedBatch ? [sharedBatch] : [], sharedBatch?.assignedBranchId ?? "");
   const canDeleteBatches = session?.role === "OPERATIONS_MANAGER" || session?.role === "DIRECT_REMIT_OFFICER";
 
-  const handleSubmit = async (values: BranchAssignmentFormValues) => {
+  const handleSelectBatch = (batch: SharedBatch) => {
+    setError(null);
+    setSelectedBatch(batch);
+    setSelectedBeneficiaries([]);
+    setAssignment(null);
+    setIsAssignmentFinalized(false);
+
+    getBeneficiaries(batch.id)
+      .then((beneficiaries) => setSelectedBeneficiaries([...beneficiaries]))
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : "Unable to load this batch's transactions.");
+      });
+  };
+
+  const handleConfirmAssignment = async (branchId: string) => {
+    if (!selectedBatch || !session) {
+      return;
+    }
+
     setError(null);
 
     try {
-      const batch = sharedBatch ?? unassignedBatches.find((candidate) => candidate.id === selectedBatchId) ?? null;
-
-      if (!batch) {
-        throw new Error("Select an uploaded Shared Batch before assigning.");
-      }
-
-      const branchName = getBranchById(values.branchId)?.name ?? values.branchId;
-
-      if (batch.assignmentStatus === "ASSIGNED") {
-        if (!assignment) {
-          throw new Error("No existing Assignment was found to reassign.");
-        }
-
-        if (!session) {
-          return;
-        }
-
-        const result = await reassignSharedBatch({
-          sharedBatch: batch,
-          newBranchId: values.branchId,
-          newBranchName: branchName,
-          reassignedByUserId: session.userId,
-          actorRole: session.role,
-          reason: values.reassignmentReason,
-          assignment,
-        });
-
-        await saveAssignment(result.assignment);
-        await saveSharedBatch(result.sharedBatch);
-        setSharedBatch(result.sharedBatch);
-        setAssignment(result.assignment);
-        setAudit(result.audit);
-        setRefreshSignal((value) => value + 1);
-        return;
-      }
-
-      if (!session) {
-        return;
-      }
-
-      const beneficiaries = await getBeneficiaries(batch.id);
-
       const result = await assignSharedBatchToBranch({
-        sharedBatch: batch,
-        beneficiaries: [...beneficiaries],
-        branchId: values.branchId,
-        branchName,
+        sharedBatch: selectedBatch,
+        beneficiaries: selectedBeneficiaries,
+        branchId,
+        branchName: getBranchById(branchId)?.name ?? branchId,
         assignedByUserId: session.userId,
         actorRole: session.role,
       });
 
       await saveAssignment(result.assignment);
       await saveSharedBatch(result.sharedBatch);
-      setSharedBatch(result.sharedBatch);
+
+      setSelectedBatch(result.sharedBatch);
       setAssignment(result.assignment);
-      setAudit(result.audit);
-      setSelectedBatchId(null);
+      setIsAssignmentFinalized(true);
       setRefreshSignal((value) => value + 1);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to assign Shared Batch.");
@@ -143,8 +114,8 @@ export function BranchAssignmentPage() {
         details: `Deleted Shared Batch ${batch.reference} (${batch.fileName}) before assignment.`,
       });
 
-      if (selectedBatchId === batch.id) {
-        setSelectedBatchId(null);
+      if (selectedBatch?.id === batch.id) {
+        setSelectedBatch(null);
       }
 
       setConfirmingDeleteId(null);
@@ -182,8 +153,8 @@ export function BranchAssignmentPage() {
                 key={batch.id}
                 style={{
                   alignItems: "center",
-                  backgroundColor: batch.id === selectedBatchId ? colors.blue50 : colors.surface,
-                  border: `1px solid ${batch.id === selectedBatchId ? colors.primary : colors.border}`,
+                  backgroundColor: batch.id === selectedBatch?.id ? colors.blue50 : colors.surface,
+                  border: `1px solid ${batch.id === selectedBatch?.id ? colors.primary : colors.border}`,
                   borderRadius: radius.sm,
                   display: "flex",
                   gap: spacing.sm,
@@ -192,7 +163,7 @@ export function BranchAssignmentPage() {
                 }}
               >
                 <button
-                  onClick={() => setSelectedBatchId(batch.id)}
+                  onClick={() => handleSelectBatch(batch)}
                   style={{ background: "none", border: "none", cursor: "pointer", flex: 1, padding: 0, textAlign: "left" }}
                   type="button"
                 >
@@ -258,13 +229,30 @@ export function BranchAssignmentPage() {
             ))}
           </div>
         )}
+        {unassignedError ? (
+          <div style={{ color: "#B91C1C", fontSize: typography.small, marginTop: spacing.sm }}>{unassignedError}</div>
+        ) : null}
         {deleteError ? (
           <div style={{ color: "#B91C1C", fontSize: typography.small, marginTop: spacing.sm }}>{deleteError}</div>
         ) : null}
       </div>
-      <BranchAssignmentForm onSubmit={handleSubmit} />
-      <BranchAssignmentStatus audit={audit} error={error} sharedBatch={sharedBatch} />
-      <BranchAssignedBatchView branchId={sharedBatch?.assignedBranchId ?? ""} sharedBatches={visibleBatches} />
+      {error ? (
+        <div style={{ backgroundColor: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 8, color: "#B91C1C", padding: 16 }}>
+          {error}
+        </div>
+      ) : null}
+      {selectedBatch ? (
+        <BranchAssignmentPanel
+          assignment={assignment}
+          assignments={assignment ? [assignment] : []}
+          assignedBeneficiaryIds={assignment ? assignment.assignedTransactions.map((beneficiary) => beneficiary.id) : []}
+          beneficiaries={selectedBeneficiaries}
+          isAssignmentConfirmed={isAssignmentFinalized}
+          isReadOnly={isAssignmentFinalized}
+          onConfirm={handleConfirmAssignment}
+          sharedBatch={selectedBatch}
+        />
+      ) : null}
     </PageContainer>
   );
 }

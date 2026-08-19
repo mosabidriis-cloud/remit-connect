@@ -114,16 +114,26 @@ export function getBatchDownloadSummary(batch: ProofDownloadBatch): BatchDownloa
   };
 }
 
+/**
+ * A proof is only truly downloadable once its own transaction is COMPLETED - a proof
+ * image can be attached to a queue item before the officer clicks Complete (upload and
+ * completion are separate steps), so transaction.status is the real gate, not just
+ * proof presence. Deliberately independent of the batch's own lifecycleStatus: the
+ * Direct Remit Officer should see and download a completed transaction's proof the
+ * moment it's done, without waiting for every other transaction in the batch to finish.
+ */
 export function getDownloadableProofs(batch: ProofDownloadBatch): DownloadableProof[] {
-  return batch.transactions.flatMap((transaction) =>
-    transaction.proofs
-      .filter((proof) => proof.fileType.startsWith("image/") && proof.status !== "EXPIRED")
-      .map((proof) => ({
-        transactionId: transaction.id,
-        directRemitReference: transaction.beneficiary.directRemitReference,
-        proof,
-      })),
-  );
+  return batch.transactions
+    .filter((transaction) => transaction.status === "COMPLETED")
+    .flatMap((transaction) =>
+      transaction.proofs
+        .filter((proof) => proof.fileType.startsWith("image/") && proof.status !== "EXPIRED")
+        .map((proof) => ({
+          transactionId: transaction.id,
+          directRemitReference: transaction.beneficiary.directRemitReference,
+          proof,
+        })),
+    );
 }
 
 export async function downloadProofZip(request: ProofDownloadRequest): Promise<ProofDownloadHistoryEntry> {
@@ -165,8 +175,11 @@ export async function downloadIndividualProof(
   proof: ProofOfPayment,
 ): Promise<ProofDownloadHistoryEntry> {
   assertDirectRemitOfficer(request.actorRole);
-  assertBatchReadyForDownload(request.batch);
 
+  // Deliberately not gated on the batch's own lifecycleStatus (unlike the ZIP-all and
+  // mark-downloaded actions below, which really are whole-batch operations) - a single
+  // completed transaction's proof should be downloadable as soon as that transaction is
+  // done, regardless of whether the rest of the batch has finished processing.
   if (!proof.fileType.startsWith("image/") || proof.status === "EXPIRED") {
     throw new Error("Only available proof images may be downloaded.");
   }
