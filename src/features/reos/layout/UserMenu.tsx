@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getBranchById } from "../services/branchRegistryService";
 import { colors, radius, shadows, spacing, typography } from "../theme";
 import { useReosSession } from "./reosAuthContext";
 
@@ -34,6 +35,15 @@ export function UserMenu() {
         .toUpperCase()
     : "?";
 
+  // A Branch Officer's role badge reads "{Branch Name} Officer" (e.g. "Port Sudan Branch
+  // Officer") rather than the generic "Branch Officer" - branch.name already ends in
+  // "Branch" (branchRegistryService), so appending "Officer" alone produces the right
+  // phrase without duplicating the word. Falls back to the generic role label for every
+  // other role, and if branchId somehow doesn't resolve (shouldn't happen for a real
+  // session, but the registry lookup is defensive either way).
+  const branch = session?.role === "BRANCH_OFFICER" && session.branchId ? getBranchById(session.branchId) : null;
+  const displayRoleLabel = session ? (branch ? `${branch.name} Officer` : roleLabel[session.role]) : "...";
+
   return (
     <div className="relative">
       <button
@@ -62,7 +72,7 @@ export function UserMenu() {
         >
           {initials}
         </span>
-        <span className="hidden lg:inline">{session ? roleLabel[session.role] : "..."}</span>
+        <span className="hidden lg:inline">{displayRoleLabel}</span>
       </button>
 
       {open ? (
@@ -80,7 +90,7 @@ export function UserMenu() {
           >
             <div style={{ borderBottom: `1px solid ${colors.slate100}`, padding: spacing.md }}>
               <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{session?.fullName ?? "..."}</div>
-              <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: 2 }}>{session ? roleLabel[session.role] : ""}</div>
+              <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: 2 }}>{session ? displayRoleLabel : ""}</div>
             </div>
             <button
               className="w-full text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600/40"

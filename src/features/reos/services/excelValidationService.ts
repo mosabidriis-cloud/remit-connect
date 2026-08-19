@@ -85,9 +85,20 @@ const headerLabels: readonly string[] = [
  */
 const minimumHeaderLabelMatches = 2;
 
+/**
+ * A safety ceiling, not a real-world usage limit - checked before `arrayBuffer()` so an
+ * oversized file is rejected before it's fully read into memory and parsed, rather than
+ * after. 25MB comfortably covers even a very large Direct Remit export.
+ */
+const maxExcelFileSizeBytes = 25 * 1024 * 1024;
+
 export async function validateExcelUpload(file: File, uploadedByUserId: string): Promise<ExcelValidationResult> {
   if (!file.name.toLowerCase().endsWith(".xlsx")) {
     throw new Error("Only .xlsx files are supported.");
+  }
+
+  if (file.size > maxExcelFileSizeBytes) {
+    throw new Error(`File is too large - Shared Batch uploads must be ${maxExcelFileSizeBytes / (1024 * 1024)}MB or smaller.`);
   }
 
   const buffer = await file.arrayBuffer();

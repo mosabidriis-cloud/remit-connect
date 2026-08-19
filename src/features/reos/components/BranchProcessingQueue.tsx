@@ -389,7 +389,10 @@ export function BranchProcessingQueue({ actorUserId, assignments, branchId, bran
         </div>
       </div>
 
-      <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}>
+      <div
+        className="sticky top-20 self-start"
+        style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}
+      >
         {selectedItem ? (
           <>
             <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Transaction Details</div>

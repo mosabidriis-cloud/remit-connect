@@ -13,9 +13,21 @@ const proofLifetimeMinutes = 90;
 const proofBucket = "proof-of-payment";
 const signedUrlLifetimeSeconds = 3600;
 
+/**
+ * Client-side mirror of the `proof-of-payment` Storage bucket's own `file_size_limit`
+ * (set directly on the bucket, so this cap is enforced twice - once here for a fast,
+ * friendly failure before any network call, once server-side by Storage itself so a
+ * client that skips this check entirely still can't exceed it).
+ */
+export const MAX_PROOF_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 export async function uploadProofOfPayment(file: File, transactionId: string, uploadedByUserId: string): Promise<ProofOfPayment> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Proof-of-payment uploads must be image files.");
+  }
+
+  if (file.size > MAX_PROOF_FILE_SIZE_BYTES) {
+    throw new Error(`Proof-of-payment files must be ${MAX_PROOF_FILE_SIZE_BYTES / (1024 * 1024)}MB or smaller.`);
   }
 
   const id = crypto.randomUUID();
