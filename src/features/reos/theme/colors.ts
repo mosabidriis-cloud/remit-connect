@@ -9,9 +9,11 @@ export const colors = {
   text: "#0F172A",
   muted: "#64748B",
   slate950: "#020617",
+  slate900: "#0F172A",
   slate700: "#334155",
   slate600: "#475569",
   slate500: "#64748B",
+  slate300: "#CBD5E1",
   slate200: "#E2E8F0",
   slate100: "#F1F5F9",
   slate50: "#F8FAFC",
@@ -24,4 +26,6 @@ export const colors = {
   red700: "#B91C1C",
   amber50: "#FFFBEB",
   amber700: "#B45309",
+  /** The login page's brand backdrop gradient, reused here so "anchor" metric cards carry the same identity into the authenticated app. */
+  brandGradient: "linear-gradient(135deg, #0B2A52 0%, #1E5AA8 55%, #2E73C7 100%)",
 } as const;

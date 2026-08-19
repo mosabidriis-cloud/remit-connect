@@ -4,7 +4,7 @@ import { LoadingState } from "../components/common/LoadingState";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { getHistoricalPerformance } from "../services/operationalDatasetService";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import type { HistoricalPerformanceResult, PeriodPerformance, SourceTotals } from "../types/operationalDataset";
 
 /**
@@ -76,31 +76,44 @@ export function HistoricalPerformancePage() {
 
 function PeriodTable({ periods }: { periods: PeriodPerformance[] }) {
   return (
-    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, overflowX: "auto" }}>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", color: colors.text, minWidth: "100%" }}>
-        <thead style={{ backgroundColor: colors.slate50, color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
+        <thead
+          style={{
+            backgroundColor: colors.slate900,
+            color: colors.slate300,
+            fontSize: typography.caption,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textAlign: "left",
+            textTransform: "uppercase",
+          }}
+        >
           <tr>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px` }}>Period</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>Batches</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>Transactions</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>MoM Growth</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>YoY Growth</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px` }}>Amount</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px` }}>Period</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>Batches</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>Transactions</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>MoM Growth</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>YoY Growth</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px` }}>Amount</th>
           </tr>
         </thead>
         <tbody>
-          {periods.map((period) => (
-            <tr key={period.period} style={{ borderTop: `1px solid ${colors.slate100}` }}>
-              <td style={{ color: colors.slate700, fontWeight: 600, padding: `${spacing.md}px ${spacing.lg}px` }}>{period.period}</td>
-              <td style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>{period.batchCount}</td>
-              <td style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>{period.transactionCount}</td>
-              <td style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>
+          {periods.map((period, index) => (
+            <tr
+              key={period.period}
+              style={{ backgroundColor: index % 2 === 1 ? colors.slate50 : colors.surface, borderTop: `1px solid ${colors.slate100}` }}
+            >
+              <td style={{ color: colors.slate700, fontWeight: 600, padding: `${spacing.sm}px ${spacing.lg}px` }}>{period.period}</td>
+              <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>{period.batchCount}</td>
+              <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>{period.transactionCount}</td>
+              <td style={{ fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>
                 <GrowthValue value={period.momGrowthPercent} />
               </td>
-              <td style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>
+              <td style={{ fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>
                 <GrowthValue value={period.yoyGrowthPercent} />
               </td>
-              <td style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px` }}>
+              <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>
                 {period.amountsByCurrency.length === 0
                   ? "—"
                   : period.amountsByCurrency.map((entry) => `${entry.totalAmount.toLocaleString()} ${entry.currency}`).join(", ")}
@@ -130,21 +143,34 @@ function GrowthValue({ value }: { value: number | null }) {
 
 function SourceTable({ sources }: { sources: SourceTotals[] }) {
   return (
-    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, overflowX: "auto" }}>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", color: colors.text, minWidth: "100%" }}>
-        <thead style={{ backgroundColor: colors.slate50, color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
+        <thead
+          style={{
+            backgroundColor: colors.slate900,
+            color: colors.slate300,
+            fontSize: typography.caption,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textAlign: "left",
+            textTransform: "uppercase",
+          }}
+        >
           <tr>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px` }}>Source</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>Batches</th>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>Transactions</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px` }}>Source</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>Batches</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>Transactions</th>
           </tr>
         </thead>
         <tbody>
-          {sources.map((source) => (
-            <tr key={source.source} style={{ borderTop: `1px solid ${colors.slate100}` }}>
-              <td style={{ color: source.batchCount > 0 ? colors.slate700 : colors.slate200, fontWeight: 600, padding: `${spacing.md}px ${spacing.lg}px` }}>{source.source}</td>
-              <td style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>{source.batchCount}</td>
-              <td style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "right" }}>{source.transactionCount}</td>
+          {sources.map((source, index) => (
+            <tr
+              key={source.source}
+              style={{ backgroundColor: index % 2 === 1 ? colors.slate50 : colors.surface, borderTop: `1px solid ${colors.slate100}` }}
+            >
+              <td style={{ color: source.batchCount > 0 ? colors.slate700 : colors.slate200, fontWeight: 600, padding: `${spacing.sm}px ${spacing.lg}px` }}>{source.source}</td>
+              <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>{source.batchCount}</td>
+              <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "right" }}>{source.transactionCount}</td>
             </tr>
           ))}
         </tbody>

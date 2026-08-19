@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import { useReosSession } from "./reosAuthContext";
 
 const roleLabel: Record<string, string> = {
@@ -8,9 +9,16 @@ const roleLabel: Record<string, string> = {
   BRANCH_OFFICER: "Branch Officer",
 };
 
+/**
+ * A real toggleable dropdown - previously the Logout button was unconditionally rendered
+ * `absolute` below the trigger, so it visually floated below the header row instead of
+ * appearing only on demand. Closed by default now; opens on trigger click, closes via the
+ * same click-outside-backdrop pattern NotificationBell uses.
+ */
 export function UserMenu() {
   const navigate = useNavigate();
   const { session, signOut } = useReosSession();
+  const [open, setOpen] = useState(false);
 
   async function handleLogout() {
     await signOut();
@@ -29,7 +37,9 @@ export function UserMenu() {
   return (
     <div className="relative">
       <button
-        className="flex h-10 items-center gap-2 rounded border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        aria-expanded={open}
+        className="flex h-10 items-center gap-2 rounded border border-slate-200 px-3 text-sm font-medium text-slate-700 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
+        onClick={() => setOpen((current) => !current)}
         style={{
           backgroundColor: colors.surface,
           border: `1px solid ${colors.border}`,
@@ -54,14 +64,35 @@ export function UserMenu() {
         </span>
         <span className="hidden lg:inline">{session ? roleLabel[session.role] : "..."}</span>
       </button>
-      <button
-        className="absolute right-0 top-full mt-2 flex h-9 items-center rounded border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-        onClick={() => void handleLogout()}
-        style={{ borderColor: colors.border, borderRadius: radius.sm, color: colors.slate700 }}
-        type="button"
-      >
-        Logout
-      </button>
+
+      {open ? (
+        <>
+          <button
+            aria-label="Close menu"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+            style={{ background: "transparent" }}
+            type="button"
+          />
+          <div
+            className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden"
+            style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.lg }}
+          >
+            <div style={{ borderBottom: `1px solid ${colors.slate100}`, padding: spacing.md }}>
+              <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{session?.fullName ?? "..."}</div>
+              <div style={{ color: colors.muted, fontSize: typography.caption, marginTop: 2 }}>{session ? roleLabel[session.role] : ""}</div>
+            </div>
+            <button
+              className="w-full text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600/40"
+              onClick={() => void handleLogout()}
+              style={{ color: colors.danger, fontSize: typography.small, fontWeight: 600, padding: `${spacing.sm}px ${spacing.md}px` }}
+              type="button"
+            >
+              Log out
+            </button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

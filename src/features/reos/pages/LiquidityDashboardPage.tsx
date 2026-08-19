@@ -63,9 +63,9 @@ export function LiquidityDashboardPage() {
         <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {(dashboard?.stats ?? []).map((stat) => (
-          <KpiCard detail={stat.detail} key={stat.id} label={stat.label} value={stat.value} />
+          <KpiCard detail={stat.detail} key={stat.id} label={stat.label} value={stat.value} variant={kpiVariant(stat.id, stat.value)} />
         ))}
       </section>
 
@@ -76,17 +76,33 @@ export function LiquidityDashboardPage() {
   );
 }
 
+function kpiVariant(id: string, value: string): "default" | "anchor" | "warning" | "danger" {
+  if (id === "total-liquidity") {
+    return "anchor";
+  }
+
+  if (id === "critical-branches") {
+    return Number(value) > 0 ? "danger" : "default";
+  }
+
+  if (id === "low-balance-branches") {
+    return Number(value) > 0 ? "warning" : "default";
+  }
+
+  return "default";
+}
+
 function BranchSection({ branches }: { branches: LiquidityDashboardBranchRow[] }) {
   return (
-    <section>
-      <h2 className="mb-2 text-base font-semibold text-slate-900">Branch Liquidity</h2>
+    <section className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
+      <h2 className="mb-4 text-base font-semibold text-slate-950">Branch Liquidity</h2>
       {branches.length === 0 ? (
         <EmptyState message="No branch has any payout accounts yet." />
       ) : (
         <DataTable
           columns={[
             { key: "branchName", header: "Branch", render: (row: LiquidityDashboardBranchRow) => row.branchName },
-            { key: "accountCount", header: "Accounts", render: (row: LiquidityDashboardBranchRow) => String(row.accountCount) },
+            { key: "accountCount", header: "Accounts", align: "right", render: (row: LiquidityDashboardBranchRow) => String(row.accountCount) },
             { key: "totalLiquidity", header: "Total", align: "right", render: (row: LiquidityDashboardBranchRow) => row.totalLiquidity.toLocaleString() },
             { key: "reservedLiquidity", header: "Reserved", align: "right", render: (row: LiquidityDashboardBranchRow) => row.reservedLiquidity.toLocaleString() },
             { key: "availableLiquidity", header: "Available", align: "right", render: (row: LiquidityDashboardBranchRow) => row.availableLiquidity.toLocaleString() },
@@ -108,8 +124,8 @@ function BranchSection({ branches }: { branches: LiquidityDashboardBranchRow[] }
 
 function AccountSection({ accounts }: { accounts: LiquidityDashboardAccountRow[] }) {
   return (
-    <section>
-      <h2 className="mb-2 text-base font-semibold text-slate-900">Payout Accounts</h2>
+    <section className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
+      <h2 className="mb-4 text-base font-semibold text-slate-950">Payout Accounts</h2>
       {accounts.length === 0 ? (
         <EmptyState message="No payout accounts have been added yet." />
       ) : (
@@ -139,8 +155,8 @@ function AccountSection({ accounts }: { accounts: LiquidityDashboardAccountRow[]
 
 function FundingSection({ fundingHistory }: { fundingHistory: LiquidityDashboardFundingRow[] }) {
   return (
-    <section>
-      <h2 className="mb-2 text-base font-semibold text-slate-900">Recent Funding History</h2>
+    <section className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
+      <h2 className="mb-4 text-base font-semibold text-slate-950">Recent Funding History</h2>
       {fundingHistory.length === 0 ? (
         <EmptyState message="No funding has been recorded yet." />
       ) : (
@@ -148,7 +164,7 @@ function FundingSection({ fundingHistory }: { fundingHistory: LiquidityDashboard
           columns={[
             { key: "updatedAt", header: "Date", render: (row: LiquidityDashboardFundingRow) => new Date(row.updatedAt).toLocaleString() },
             { key: "branchName", header: "Branch", render: (row: LiquidityDashboardFundingRow) => row.branchName ?? "-" },
-            { key: "accountCount", header: "Accounts Funded", render: (row: LiquidityDashboardFundingRow) => String(row.accountCount) },
+            { key: "accountCount", header: "Accounts Funded", align: "right", render: (row: LiquidityDashboardFundingRow) => String(row.accountCount) },
             { key: "totalAmount", header: "Total Amount", align: "right", render: (row: LiquidityDashboardFundingRow) => row.totalAmount.toLocaleString() },
             { key: "updatedByUserId", header: "Recorded By", render: (row: LiquidityDashboardFundingRow) => row.updatedByUserId },
           ]}

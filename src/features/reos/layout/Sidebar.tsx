@@ -32,10 +32,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
         {sidebarSections.map((section) => (
           <div className="mb-6 last:mb-0" key={section.label}>
             <div
-              className={`mb-2 overflow-hidden px-2 text-xs font-semibold uppercase tracking-normal text-slate-500 transition-all duration-300 ${
-                collapsed ? "h-0 opacity-0" : "h-5 opacity-100"
+              className={`mb-2 overflow-hidden border-b border-slate-100 pb-1.5 text-xs font-bold uppercase tracking-widest text-slate-400 transition-all duration-300 ${
+                collapsed ? "h-0 border-b-0 opacity-0" : "h-6 opacity-100"
               }`}
-              style={{ color: colors.muted, fontSize: typography.caption, paddingLeft: spacing.sm, paddingRight: spacing.sm }}
+              style={{ fontSize: typography.caption, letterSpacing: "0.12em", paddingLeft: spacing.sm, paddingRight: spacing.sm }}
             >
                 {section.label}
             </div>
@@ -48,26 +48,17 @@ export function Sidebar({ collapsed }: SidebarProps) {
                   <Link
                     aria-current={active ? "page" : undefined}
                     className={`group relative flex items-center gap-3 rounded px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
-                      active
-                        ? "bg-slate-950 text-white shadow-sm"
-                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                      active ? "text-white shadow-md" : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                     } ${collapsed ? "justify-center" : ""}`}
                     key={item.label}
                     style={{
+                      background: active ? colors.brandGradient : "transparent",
                       borderRadius: radius.sm,
-                      color: active ? colors.surface : colors.slate700,
-                      backgroundColor: active ? colors.slate950 : "transparent",
                       boxShadow: active ? shadows.sm : "none",
                     }}
                     title={collapsed ? item.label : undefined}
                     to={href}
                   >
-                    <span
-                      className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-400 transition-opacity duration-200 ${
-                        active ? "opacity-100" : "opacity-0"
-                      }`}
-                      style={{ backgroundColor: colors.success, borderRadius: radius.sm }}
-                    />
                     <span
                       className={`grid h-7 w-7 shrink-0 place-items-center rounded text-xs transition-colors ${
                         active ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-white"

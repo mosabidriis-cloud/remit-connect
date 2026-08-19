@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { colors, radius, spacing } from "../theme";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { NotificationBell } from "./NotificationBell";
 import { SearchBar } from "./SearchBar";
 import { getActiveSidebarItem } from "./sidebarConfig";
 import { UserMenu } from "./UserMenu";
@@ -29,7 +30,7 @@ export function Header({ collapsed, onToggleSidebar }: HeaderProps) {
     >
       <button
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="hidden h-10 w-10 shrink-0 place-items-center rounded border border-slate-200 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:grid"
+        className="hidden h-10 w-10 shrink-0 place-items-center rounded border border-slate-200 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 md:grid"
         onClick={onToggleSidebar}
         style={{ borderColor: colors.border, borderRadius: radius.sm, color: colors.slate700 }}
         type="button"
@@ -44,14 +45,7 @@ export function Header({ collapsed, onToggleSidebar }: HeaderProps) {
 
       <SearchBar />
 
-      <button
-        aria-label="Notifications"
-        className="grid h-10 w-10 shrink-0 place-items-center rounded border border-slate-200 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        style={{ borderColor: colors.border, borderRadius: radius.sm, color: colors.slate700 }}
-        type="button"
-      >
-        N
-      </button>
+      <NotificationBell />
 
       <UserMenu />
     </header>

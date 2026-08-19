@@ -52,6 +52,21 @@ export function ReportTable<T extends Record<string, unknown>>({
     currentPage * pageSize,
   );
 
+  // Which columns are genuinely numeric (for right-alignment/tabular-nums) is not knowable
+  // from `columns` alone - report definitions vary per report type - so it's detected from
+  // the underlying row values themselves rather than declared per column.
+  const numericColumnKeys = useMemo(() => {
+    const keys = new Set<string>();
+
+    columns.forEach((column) => {
+      if (rows.some((row) => typeof row[column.key] === "number")) {
+        keys.add(column.key);
+      }
+    });
+
+    return keys;
+  }, [columns, rows]);
+
   const handleSort = (column: ReportColumn) => {
     if (!column.sortable) {
       return;
@@ -65,23 +80,26 @@ export function ReportTable<T extends Record<string, unknown>>({
   };
 
   return (
-    <section className="rounded border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-3">
+    <section className="rounded-xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
+      <div className="border-b border-slate-200 px-5 py-4">
         <h2 className="text-base font-semibold text-slate-950">Detail Table</h2>
       </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600">
+          <thead className="bg-slate-900 text-left text-xs font-semibold uppercase tracking-wider text-slate-300">
             <tr>
               {columns.length === 0 ? (
-                <th className="px-4 py-3">Operational Records</th>
+                <th className="px-4 py-2.5">Operational Records</th>
               ) : (
                 columns.map((column) => (
-                  <th className="px-4 py-3" key={column.key}>
+                  <th
+                    className={`px-4 py-2.5 ${numericColumnKeys.has(column.key) ? "text-right" : ""}`}
+                    key={column.key}
+                  >
                     {column.sortable ? (
                       <button
-                        className="font-semibold text-slate-600"
+                        className="rounded font-semibold text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900"
                         onClick={() => handleSort(column)}
                         type="button"
                       >
@@ -113,9 +131,12 @@ export function ReportTable<T extends Record<string, unknown>>({
               </tr>
             ) : (
               pagedRows.map((row, rowIndex) => (
-                <tr key={getRowKey(row, rowIndex)}>
+                <tr className="even:bg-slate-50/60 transition-colors hover:bg-blue-50/40" key={getRowKey(row, rowIndex)}>
                   {columns.map((column) => (
-                    <td className="px-4 py-3 text-slate-700" key={column.key}>
+                    <td
+                      className={`px-4 py-2.5 text-slate-700 ${numericColumnKeys.has(column.key) ? "text-right tabular-nums" : ""}`}
+                      key={column.key}
+                    >
                       {renderCell ? renderCell(row, column) : formatCellValue(row[column.key])}
                     </td>
                   ))}
@@ -127,7 +148,10 @@ export function ReportTable<T extends Record<string, unknown>>({
             <tfoot className="border-t border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900">
               <tr>
                 {columns.map((column, index) => (
-                  <td className="px-4 py-3" key={column.key}>
+                  <td
+                    className={`px-4 py-2.5 ${numericColumnKeys.has(column.key) ? "text-right tabular-nums" : ""}`}
+                    key={column.key}
+                  >
                     {index === 0 ? "Totals" : totals[column.key as keyof T] ?? ""}
                   </td>
                 ))}
@@ -137,13 +161,13 @@ export function ReportTable<T extends Record<string, unknown>>({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 text-sm text-slate-600">
         <span>
           Page {currentPage} of {totalPages}
         </span>
         <div className="flex gap-2">
           <button
-            className="rounded border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-slate-300 px-3 py-1.5 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             disabled={currentPage === 1}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             type="button"
@@ -151,7 +175,7 @@ export function ReportTable<T extends Record<string, unknown>>({
             Previous
           </button>
           <button
-            className="rounded border border-slate-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded border border-slate-300 px-3 py-1.5 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             disabled={currentPage === totalPages}
             onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             type="button"

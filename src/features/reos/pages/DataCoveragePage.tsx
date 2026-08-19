@@ -4,7 +4,7 @@ import { LoadingState } from "../components/common/LoadingState";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { getCoverageMatrix } from "../services/operationalDatasetService";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import type { CoverageCell, CoverageCellStatus, CoverageYearGroup } from "../types/operationalDataset";
 import type { ImportSource } from "../types/importIntelligence";
 
@@ -95,22 +95,35 @@ function Legend() {
 
 function YearTable({ yearGroup }: { yearGroup: CoverageYearGroup }) {
   return (
-    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, overflowX: "auto" }}>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", color: colors.text, minWidth: "100%" }}>
-        <thead style={{ backgroundColor: colors.slate50, color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
+        <thead
+          style={{
+            backgroundColor: colors.slate900,
+            color: colors.slate300,
+            fontSize: typography.caption,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textAlign: "left",
+            textTransform: "uppercase",
+          }}
+        >
           <tr>
-            <th style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "left" }}>{yearGroup.year}</th>
+            <th style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "left" }}>{yearGroup.year}</th>
             {SOURCE_ORDER.map((source) => (
-              <th key={source} style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "center" }}>
+              <th key={source} style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "center" }}>
                 {source}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {yearGroup.months.map((row) => (
-            <tr key={row.period} style={{ borderTop: `1px solid ${colors.slate100}` }}>
-              <td style={{ color: colors.slate700, fontWeight: 600, padding: `${spacing.md}px ${spacing.lg}px` }}>{MONTH_NAMES[row.month - 1]}</td>
+          {yearGroup.months.map((row, index) => (
+            <tr
+              key={row.period}
+              style={{ backgroundColor: index % 2 === 1 ? colors.slate50 : colors.surface, borderTop: `1px solid ${colors.slate100}` }}
+            >
+              <td style={{ color: colors.slate700, fontWeight: 600, padding: `${spacing.sm}px ${spacing.lg}px` }}>{MONTH_NAMES[row.month - 1]}</td>
               {row.cells.map((cell) => (
                 <CoverageStatusCell cell={cell} key={cell.source} />
               ))}
@@ -130,7 +143,7 @@ function CoverageStatusCell({ cell }: { cell: CoverageCell }) {
       : `${presentation.label} - ${cell.batchCount} batch(es) ever recorded, ${cell.activeTransactionCount} active transaction(s)`;
 
   return (
-    <td style={{ color: presentation.color, fontWeight: 600, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: "center" }} title={title}>
+    <td style={{ color: presentation.color, fontWeight: 600, padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: "center" }} title={title}>
       {presentation.symbol}
     </td>
   );

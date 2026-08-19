@@ -4,7 +4,7 @@ import { LoadingState } from "../components/common/LoadingState";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { getDuplicateGroups } from "../services/operationalDatasetService";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import type { ImportBatchRecord } from "../types/importIntelligence";
 import type { DuplicateGroup, DuplicateReason } from "../types/operationalDataset";
 
@@ -80,7 +80,7 @@ export function DuplicateManagementPage() {
 
 function DuplicateGroupCard({ group }: { group: DuplicateGroup }) {
   return (
-    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: spacing.lg }}>
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, padding: spacing.xl }}>
       <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between" }}>
         <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>
           {group.source} · {group.reportingPeriod}
@@ -101,7 +101,17 @@ function DuplicateGroupCard({ group }: { group: DuplicateGroup }) {
 
       <div style={{ marginTop: spacing.md, overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
-          <thead style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
+          <thead
+            style={{
+              backgroundColor: colors.slate900,
+              color: colors.slate300,
+              fontSize: typography.caption,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textAlign: "left",
+              textTransform: "uppercase",
+            }}
+          >
             <tr>
               <th style={{ padding: `${spacing.sm}px ${spacing.md}px` }}>Batch Reference</th>
               <th style={{ padding: `${spacing.sm}px ${spacing.md}px` }}>File</th>
@@ -112,11 +122,18 @@ function DuplicateGroupCard({ group }: { group: DuplicateGroup }) {
             </tr>
           </thead>
           <tbody>
-            {group.batches.map((batch) => (
-              <tr key={batch.id} style={{ borderTop: `1px solid ${colors.slate100}`, fontSize: typography.small }}>
+            {group.batches.map((batch, index) => (
+              <tr
+                key={batch.id}
+                style={{
+                  backgroundColor: index % 2 === 1 ? colors.slate50 : colors.surface,
+                  borderTop: `1px solid ${colors.slate100}`,
+                  fontSize: typography.small,
+                }}
+              >
                 <td style={{ color: colors.text, fontWeight: 600, padding: `${spacing.sm}px ${spacing.md}px` }}>{batch.batchReference}</td>
                 <td style={{ color: colors.slate700, padding: `${spacing.sm}px ${spacing.md}px` }}>{batch.fileName}</td>
-                <td style={{ color: colors.slate700, padding: `${spacing.sm}px ${spacing.md}px`, textAlign: "right" }}>{batch.transactionCount}</td>
+                <td style={{ color: colors.slate700, fontVariantNumeric: "tabular-nums", padding: `${spacing.sm}px ${spacing.md}px`, textAlign: "right" }}>{batch.transactionCount}</td>
                 <td style={{ color: statusTone[batch.duplicateStatus], fontWeight: 600, padding: `${spacing.sm}px ${spacing.md}px` }}>{batch.duplicateStatus}</td>
                 <td style={{ color: colors.slate700, padding: `${spacing.sm}px ${spacing.md}px` }}>{new Date(batch.uploadTimestamp).toLocaleString()}</td>
                 <td style={{ color: colors.slate700, padding: `${spacing.sm}px ${spacing.md}px` }}>{batch.uploadedByUserId}</td>

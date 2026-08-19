@@ -55,22 +55,25 @@ export function DuplicateImportDialog({ open, matches, onReplace, onMerge, onCan
 
         <div style={{ display: "flex", gap: spacing.sm, justifyContent: "flex-end", marginTop: spacing.lg }}>
           <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
             onClick={onCancel}
-            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.sm, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.md, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
             type="button"
           >
             Cancel
           </button>
           <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
             onClick={onMerge}
-            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.sm, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.md, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
             type="button"
           >
             Merge (skip already-recorded references)
           </button>
           <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
             onClick={onReplace}
-            style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.md, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
             type="button"
           >
             Replace

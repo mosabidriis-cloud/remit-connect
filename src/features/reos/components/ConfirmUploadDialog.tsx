@@ -47,10 +47,21 @@ export function ConfirmUploadDialog({ open, onCancel, onConfirm, canConfirm, sum
           {summary.readyForAssignment ? "The batch is ready for assignment." : "The batch requires additional review before assignment."}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: spacing.sm, marginTop: spacing.lg }}>
-          <button onClick={onCancel} style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.sm, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
+          <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
+            onClick={onCancel}
+            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.md, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            type="button"
+          >
             Cancel
           </button>
-          <button disabled={!canConfirm} onClick={onConfirm} style={{ backgroundColor: canConfirm ? colors.primary : colors.slate200, border: "none", borderRadius: radius.sm, color: canConfirm ? colors.surface : colors.muted, cursor: canConfirm ? "pointer" : "not-allowed", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
+          <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:hover:opacity-100"
+            disabled={!canConfirm}
+            onClick={onConfirm}
+            style={{ backgroundColor: canConfirm ? colors.primary : colors.slate200, border: "none", borderRadius: radius.md, color: canConfirm ? colors.surface : colors.muted, cursor: canConfirm ? "pointer" : "not-allowed", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            type="button"
+          >
             Confirm Upload
           </button>
         </div>

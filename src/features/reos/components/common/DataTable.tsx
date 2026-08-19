@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { colors, radius, spacing, typography } from "../../theme";
+import { colors, radius, shadows, spacing, typography } from "../../theme";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -20,17 +20,28 @@ export function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
       style={{
         backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
-        borderRadius: radius.sm,
+        borderRadius: radius.lg,
+        boxShadow: shadows.sm,
         overflowX: "auto",
       }}
     >
       <table className="min-w-full text-sm" style={{ borderCollapse: "collapse", color: colors.text }}>
-        <thead style={{ backgroundColor: colors.slate50, color: colors.muted, fontSize: typography.caption, fontWeight: 600, textAlign: "left", textTransform: "uppercase" }}>
+        <thead
+          style={{
+            backgroundColor: colors.slate900,
+            color: colors.slate300,
+            fontSize: typography.caption,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textAlign: "left",
+            textTransform: "uppercase",
+          }}
+        >
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
-                style={{ padding: `${spacing.md}px ${spacing.lg}px`, textAlign: column.align === "right" ? "right" : "left" }}
+                style={{ padding: `${spacing.sm}px ${spacing.lg}px`, textAlign: column.align === "right" ? "right" : "left" }}
               >
                 {column.header}
               </th>
@@ -38,12 +49,23 @@ export function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={getRowKey(row)} style={{ borderTop: `1px solid ${colors.slate100}` }}>
+          {rows.map((row, index) => (
+            <tr
+              key={getRowKey(row)}
+              style={{
+                backgroundColor: index % 2 === 1 ? colors.slate50 : colors.surface,
+                borderTop: `1px solid ${colors.slate100}`,
+              }}
+            >
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  style={{ color: colors.slate700, padding: `${spacing.md}px ${spacing.lg}px`, textAlign: column.align === "right" ? "right" : "left" }}
+                  style={{
+                    color: colors.slate700,
+                    fontVariantNumeric: column.align === "right" ? "tabular-nums" : undefined,
+                    padding: `${spacing.sm}px ${spacing.lg}px`,
+                    textAlign: column.align === "right" ? "right" : "left",
+                  }}
                 >
                   {column.render(row)}
                 </td>

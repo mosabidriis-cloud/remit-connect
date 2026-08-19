@@ -457,6 +457,45 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          branch_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          is_read: boolean
+          message: string
+          recipient_user_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id: string
+          is_read?: boolean
+          message: string
+          recipient_user_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          recipient_user_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       payout_accounts: {
         Row: {
           account_number: string
@@ -698,7 +737,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals["public"]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends

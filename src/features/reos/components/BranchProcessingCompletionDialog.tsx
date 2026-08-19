@@ -59,27 +59,37 @@ export function BranchProcessingCompletionDialog({
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: colors.muted, fontSize: typography.small }}>Assigned Count</span>
-            <span style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{assignedCount}</span>
+            <span style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{assignedCount}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: colors.muted, fontSize: typography.small }}>Completed Count</span>
-            <span style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{completedCount}</span>
+            <span style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{completedCount}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: colors.muted, fontSize: typography.small }}>Returned Count</span>
-            <span style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{returnedCount}</span>
+            <span style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{returnedCount}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span style={{ color: colors.muted, fontSize: typography.small }}>Completion Percentage</span>
-            <span style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{completionPercentage}%</span>
+            <span style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{completionPercentage}%</span>
           </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: spacing.sm, marginTop: spacing.lg }}>
-          <button onClick={onCancel} style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.sm, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
+          <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
+            onClick={onCancel}
+            style={{ backgroundColor: colors.slate100, border: "none", borderRadius: radius.md, color: colors.text, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            type="button"
+          >
             Cancel
           </button>
-          <button onClick={onConfirm} style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.sm, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }} type="button">
+          <button
+            className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1"
+            onClick={onConfirm}
+            style={{ backgroundColor: colors.primary, border: "none", borderRadius: radius.md, color: colors.surface, cursor: "pointer", padding: `${spacing.sm}px ${spacing.lg}px` }}
+            type="button"
+          >
             Finalize Processing
           </button>
         </div>

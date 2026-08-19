@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { BranchPerformanceTable } from "../components/BranchPerformanceTable";
 import { KpiCard } from "../components/common/KpiCard";
 import { PageContainer } from "../components/common/PageContainer";
@@ -26,6 +27,7 @@ import type { ProjectionScope } from "../types/reportingProjection";
 
 export function OperationsDashboardPage() {
   const { session } = useReosSession();
+  const location = useLocation();
   const [dashboard, setDashboard] = useState<OperationsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +70,19 @@ export function OperationsDashboardPage() {
     };
   }, [session]);
 
+  // Lets the Command Palette (and any other external link) deep-link straight to a
+  // section, e.g. /reos/dashboard#exception-center - the target only exists once
+  // `dashboard` has loaded, so this can't run until then.
+  useEffect(() => {
+    if (!dashboard || !location.hash) {
+      return;
+    }
+
+    const targetId = location.hash.slice(1);
+
+    document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [dashboard, location.hash]);
+
   const handleDrillDown = (path: string) => {
     const targetId = path.split("#")[1];
 
@@ -96,21 +111,33 @@ export function OperationsDashboardPage() {
       />
 
       {error ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm shadow-red-100">
           {error}
         </div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {(dashboard?.criticalAlerts ?? []).map((alert) => (
-          <CriticalAlertCard alert={alert} key={alert.id} onDrillDown={handleDrillDown} />
-        ))}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Critical Alerts</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {(dashboard?.criticalAlerts ?? []).map((alert) => (
+            <CriticalAlertCard alert={alert} key={alert.id} onDrillDown={handleDrillDown} />
+          ))}
+        </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {visibleStats.map((stat) => (
-          <KpiCard detail={stat.detail} key={stat.id} label={stat.label} value={stat.value} />
-        ))}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Key Metrics</h2>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {visibleStats.map((stat) => (
+            <KpiCard
+              detail={stat.detail}
+              key={stat.id}
+              label={stat.label}
+              value={stat.value}
+              variant={stat.id === "transactions-today" ? "anchor" : "default"}
+            />
+          ))}
+        </div>
       </section>
 
       <BranchPerformanceTable branches={dashboard?.branchPerformance ?? []} />

@@ -54,10 +54,11 @@ export function ReturnTransactionDialog({ returnReasons, onReturn }: ReturnTrans
       </label>
       <div>
         <button
+          className="transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:ring-offset-1"
           style={{
             backgroundColor: colors.surface,
             border: `1px solid ${colors.danger}`,
-            borderRadius: radius.sm,
+            borderRadius: radius.md,
             color: colors.danger,
             cursor: "pointer",
             fontSize: typography.small,

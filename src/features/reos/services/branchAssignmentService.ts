@@ -1,5 +1,6 @@
 import { createAssignment } from "./assignmentService";
 import { recordAuditEvent } from "./auditService";
+import { notifyBranchOfficersOfBatchAssignment } from "./notificationService";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type {
@@ -71,6 +72,10 @@ export async function assignSharedBatchToBranch(input: AssignSharedBatchInput): 
     details: `Assigned Shared Batch ${input.sharedBatch.reference} to ${input.branchName}.`,
     performedAt: assignedAt,
   });
+
+  // Never throws - a failed notification must not block the assignment itself (same
+  // non-blocking-additive-persistence rule recordAuditEvent above follows).
+  await notifyBranchOfficersOfBatchAssignment(assignment);
 
   return {
     sharedBatch: {

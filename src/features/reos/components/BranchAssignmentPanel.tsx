@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAllBranches } from "../services/branchRegistryService";
 import { getAllPayoutAccounts } from "../services/liquidityService";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
 import type { PayoutAccount } from "../types/liquidity";
@@ -79,7 +79,8 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
       style={{
         backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
-        borderRadius: radius.md,
+        borderRadius: radius.lg,
+        boxShadow: shadows.sm,
         padding: spacing.lg,
       }}
     >
@@ -161,15 +162,15 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Ready for Assignment</div>
-          <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{pendingReadyTransactions.length}</div>
+          <div style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", marginTop: spacing.xs }}>{pendingReadyTransactions.length}</div>
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Manual Review</div>
-          <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{manualReviewCount}</div>
+          <div style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", marginTop: spacing.xs }}>{manualReviewCount}</div>
         </div>
         <div>
           <div style={{ color: colors.muted, fontSize: typography.caption, fontWeight: 600, textTransform: "uppercase" }}>Invalid</div>
-          <div style={{ color: colors.text, fontSize: typography.small, marginTop: spacing.xs }}>{invalidCount}</div>
+          <div style={{ color: colors.text, fontSize: typography.small, fontVariantNumeric: "tabular-nums", marginTop: spacing.xs }}>{invalidCount}</div>
         </div>
       </div>
 
@@ -226,12 +227,13 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: spacing.lg }}>
         <button
+          className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:hover:opacity-100"
           disabled={!canConfirm || isReadOnly}
           onClick={() => onConfirm(selectedBranchId)}
           style={{
             backgroundColor: canConfirm ? colors.primary : colors.slate200,
             border: "none",
-            borderRadius: radius.sm,
+            borderRadius: radius.md,
             color: canConfirm ? colors.surface : colors.muted,
             cursor: canConfirm ? "pointer" : "not-allowed",
             padding: `${spacing.sm}px ${spacing.lg}px`,
