@@ -20,6 +20,24 @@ type BranchAssignmentPanelProps = {
 
 const branchOptions = getAllBranches();
 
+/** Shared by both the informational card list and the actual branch-select dropdown below, so the two can never drift out of sync with each other. */
+function summarizeBranchLiquidity(accounts: PayoutAccount[]): string {
+  if (accounts.length === 0) {
+    return "no payout accounts";
+  }
+
+  const totalsByCurrency = accounts.reduce<Record<string, number>>((totals, account) => {
+    totals[account.currency] = (totals[account.currency] ?? 0) + account.currentBalance;
+    return totals;
+  }, {});
+
+  const totalsLabel = Object.entries(totalsByCurrency)
+    .map(([currency, total]) => `${currency} ${total.toLocaleString()}`)
+    .join(", ");
+
+  return `${accounts.length} account${accounts.length === 1 ? "" : "s"}, ${totalsLabel} total`;
+}
+
 export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, assignments, assignedBeneficiaryIds, onConfirm, isAssignmentConfirmed, isReadOnly = false }: BranchAssignmentPanelProps) {
   const [selectedBranchId, setSelectedBranchId] = useState(branchOptions[0]?.id ?? "");
   const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccount[]>([]);
@@ -153,11 +171,15 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
             style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: "8px 10px", width: "100%" }}
             value={selectedBranchId}
           >
-            {branchOptions.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
+            {branchOptions.map((branch) => {
+              const branchAccounts = payoutAccounts.filter((account) => account.branchId === branch.id);
+
+              return (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name} - {summarizeBranchLiquidity(branchAccounts)}
+                </option>
+              );
+            })}
           </select>
         </div>
         <div>
