@@ -10,7 +10,8 @@ import {
   reassignSharedBatch,
 } from "../services/branchAssignmentService";
 import { getBranchById } from "../services/branchRegistryService";
-import { getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
+import { deleteSharedBatch, getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
+import { recordAuditEvent } from "../services/auditService";
 import { useReosSession } from "../layout/reosAuthContext";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
@@ -26,6 +27,9 @@ export function BranchAssignmentPage() {
   const [error, setError] = useState<string | null>(null);
   const [unassignedBatches, setUnassignedBatches] = useState<SharedBatch[]>([]);
   const [refreshSignal, setRefreshSignal] = useState(0);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Real, uploaded Shared Batches waiting for their initial assignment. Re-fetched after
   // every successful assign/reassign (refreshSignal) so the just-assigned batch drops
@@ -52,6 +56,7 @@ export function BranchAssignmentPage() {
   }, [refreshSignal]);
 
   const visibleBatches = getSharedBatchesVisibleToBranchOfficer(sharedBatch ? [sharedBatch] : [], sharedBatch?.assignedBranchId ?? "");
+  const canDeleteBatches = session?.role === "OPERATIONS_MANAGER" || session?.role === "DIRECT_REMIT_OFFICER";
 
   const handleSubmit = async (values: BranchAssignmentFormValues) => {
     setError(null);
@@ -120,6 +125,37 @@ export function BranchAssignmentPage() {
     }
   };
 
+  const handleDeleteBatch = async (batch: SharedBatch) => {
+    if (!session) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteSharedBatch(batch.id);
+      await recordAuditEvent({
+        actorUserId: session.userId,
+        action: "BATCH_DELETED",
+        entityType: "SHARED_BATCH",
+        entityId: batch.id,
+        details: `Deleted Shared Batch ${batch.reference} (${batch.fileName}) before assignment.`,
+      });
+
+      if (selectedBatchId === batch.id) {
+        setSelectedBatchId(null);
+      }
+
+      setConfirmingDeleteId(null);
+      setRefreshSignal((value) => value + 1);
+    } catch (caughtError) {
+      setDeleteError(caughtError instanceof Error ? caughtError.message : "Unable to delete this batch.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <PageContainer>
       <PageHeader
@@ -142,27 +178,89 @@ export function BranchAssignmentPage() {
         ) : (
           <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.md }}>
             {unassignedBatches.map((batch) => (
-              <button
+              <div
                 key={batch.id}
-                onClick={() => setSelectedBatchId(batch.id)}
                 style={{
+                  alignItems: "center",
                   backgroundColor: batch.id === selectedBatchId ? colors.blue50 : colors.surface,
                   border: `1px solid ${batch.id === selectedBatchId ? colors.primary : colors.border}`,
                   borderRadius: radius.sm,
-                  cursor: "pointer",
+                  display: "flex",
+                  gap: spacing.sm,
+                  justifyContent: "space-between",
                   padding: `${spacing.sm}px ${spacing.md}px`,
-                  textAlign: "left",
                 }}
-                type="button"
               >
-                <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{batch.reference}</div>
-                <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
-                  {batch.fileName} • {batch.totalBeneficiaries} beneficiaries • uploaded {new Date(batch.uploadDate).toLocaleString()}
-                </div>
-              </button>
+                <button
+                  onClick={() => setSelectedBatchId(batch.id)}
+                  style={{ background: "none", border: "none", cursor: "pointer", flex: 1, padding: 0, textAlign: "left" }}
+                  type="button"
+                >
+                  <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{batch.reference}</div>
+                  <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+                    {batch.fileName} • {batch.totalBeneficiaries} beneficiaries • uploaded {new Date(batch.uploadDate).toLocaleString()}
+                  </div>
+                </button>
+                {canDeleteBatches ? (
+                  confirmingDeleteId === batch.id ? (
+                    <div style={{ alignItems: "center", display: "flex", gap: spacing.xs }}>
+                      <span style={{ color: "#B91C1C", fontSize: typography.small }}>Delete this batch?</span>
+                      <button
+                        disabled={isDeleting}
+                        onClick={() => setConfirmingDeleteId(null)}
+                        style={{
+                          backgroundColor: "transparent",
+                          border: `1px solid ${colors.border}`,
+                          borderRadius: 4,
+                          cursor: isDeleting ? "not-allowed" : "pointer",
+                          padding: "4px 10px",
+                        }}
+                        type="button"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        disabled={isDeleting}
+                        onClick={() => handleDeleteBatch(batch)}
+                        style={{
+                          backgroundColor: "#DC2626",
+                          border: "none",
+                          borderRadius: 4,
+                          color: "#FFFFFF",
+                          cursor: isDeleting ? "not-allowed" : "pointer",
+                          opacity: isDeleting ? 0.7 : 1,
+                          padding: "4px 10px",
+                        }}
+                        type="button"
+                      >
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingDeleteId(batch.id)}
+                      style={{
+                        backgroundColor: "transparent",
+                        border: "1px solid #FCA5A5",
+                        borderRadius: 4,
+                        color: "#B91C1C",
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        padding: "6px 12px",
+                      }}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  )
+                ) : null}
+              </div>
             ))}
           </div>
         )}
+        {deleteError ? (
+          <div style={{ color: "#B91C1C", fontSize: typography.small, marginTop: spacing.sm }}>{deleteError}</div>
+        ) : null}
       </div>
       <BranchAssignmentForm onSubmit={handleSubmit} />
       <BranchAssignmentStatus audit={audit} error={error} sharedBatch={sharedBatch} />
