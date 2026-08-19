@@ -92,8 +92,8 @@ export const sidebarSections: SidebarSection[] = [
       },
       {
         label: "Proof Download",
-        href: "/reos/shared-batches/BATCH_ID/proof-download",
-        match: /^\/reos\/shared-batches\/[^/]+\/proof-download$/,
+        href: "/reos/shared-batches/proof-download",
+        match: /^\/reos\/shared-batches\/(proof-download|[^/]+\/proof-download)$/,
         roles: DRO_OR_OM,
       },
     ],
