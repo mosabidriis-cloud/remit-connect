@@ -7,6 +7,7 @@
 export type AuditAction =
   | "BATCH_UPLOADED"
   | "BATCH_CONFIRMED"
+  | "BATCH_DELETED"
   | "BATCH_ASSIGNED"
   | "BATCH_REASSIGNED"
   | "TRANSACTION_STARTED"

@@ -28,7 +28,7 @@ import {
 } from "../services/importIntelligenceService";
 import { useReosSession } from "../layout/reosAuthContext";
 import { getImportHistoryEntries } from "../services/operationalDatasetService";
-import { saveAssignment, saveBeneficiaries, saveSharedBatch } from "../services/sharedBatchStore";
+import { deleteSharedBatch, saveAssignment, saveBeneficiaries, saveSharedBatch } from "../services/sharedBatchStore";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
@@ -67,6 +67,9 @@ export function SharedBatchUploadPage() {
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [validationIssues, setValidationIssues] = useState<Array<{ id: string; field: string; message: string; severity: "ERROR" | "WARNING" }>>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Import Intelligence (DEC-016, IMPORT_INTELLIGENCE.md) - durable ledger, not the live
   // operational workflow above. Failing to check/persist never blocks assignment.
@@ -226,6 +229,61 @@ export function SharedBatchUploadPage() {
     }
   };
 
+  /**
+   * The "I uploaded the wrong file" undo path (DEC-032) - available any time between
+   * upload and actual branch assignment, whether or not Confirm Upload has happened yet.
+   * RLS is the real guard (assignment_status = 'UNASSIGNED'); this button is simply not
+   * shown once isAssignmentFinalized, matching that same invariant client-side.
+   */
+  const handleDeleteBatch = async () => {
+    if (!sharedBatch || !session) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteSharedBatch(sharedBatch.id);
+      await recordAuditEvent({
+        actorUserId: session.userId,
+        action: "BATCH_DELETED",
+        entityType: "SHARED_BATCH",
+        entityId: sharedBatch.id,
+        details: `Deleted Shared Batch ${sharedBatch.reference} (${sharedBatch.fileName}) before assignment.`,
+      });
+
+      // Reset to the same empty "ready to upload" state handleUpload's own reset block
+      // establishes - the page is ready for a fresh upload immediately.
+      setSelectedFileName(null);
+      setProgress(0);
+      setValidationError(null);
+      setValidationIssues([]);
+      setValidationSummary(null);
+      setSharedBatch(null);
+      setIsConfirmed(false);
+      setIsAssignmentConfirmed(false);
+      setAssignableBeneficiaries([]);
+      setAssignments([]);
+      setAssignedBeneficiaryIds([]);
+      setAssignment(null);
+      setIsAssignmentFinalized(false);
+      setIsValidationComplete(false);
+      setUploadedFile(null);
+      setFileChecksum(null);
+      setDuplicateMatches([]);
+      setShowDuplicateDialog(false);
+      setImportRecord(null);
+      setImportCoverageImpact(null);
+      setImportIntelligenceError(null);
+      setIsConfirmingDelete(false);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete this batch.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const stage = useMemo(() => {
     if (isUploading) {
       return "uploading" as const;
@@ -314,6 +372,72 @@ export function SharedBatchUploadPage() {
               {isConfirmed ? "Upload Confirmed" : "Confirm Upload"}
             </button>
           </div>
+          {!isAssignmentFinalized &&
+          (session?.role === "OPERATIONS_MANAGER" || session?.role === "DIRECT_REMIT_OFFICER") ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: spacing.sm }}>
+              {isConfirmingDelete ? (
+                <div
+                  style={{
+                    alignItems: "center",
+                    backgroundColor: "#FEF2F2",
+                    border: "1px solid #FCA5A5",
+                    borderRadius: 8,
+                    display: "flex",
+                    gap: spacing.sm,
+                    padding: 12,
+                  }}
+                >
+                  <span style={{ color: "#B91C1C" }}>Delete this batch? This can&apos;t be undone.</span>
+                  <button
+                    disabled={isDeleting}
+                    onClick={() => setIsConfirmingDelete(false)}
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid #D1D5DB",
+                      borderRadius: 4,
+                      cursor: isDeleting ? "not-allowed" : "pointer",
+                      padding: "6px 12px",
+                    }}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={isDeleting}
+                    onClick={handleDeleteBatch}
+                    style={{
+                      backgroundColor: "#DC2626",
+                      border: "none",
+                      borderRadius: 4,
+                      color: "#FFFFFF",
+                      cursor: isDeleting ? "not-allowed" : "pointer",
+                      opacity: isDeleting ? 0.7 : 1,
+                      padding: "6px 12px",
+                    }}
+                    type="button"
+                  >
+                    {isDeleting ? "Deleting..." : "Delete Batch"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsConfirmingDelete(true)}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #FCA5A5",
+                    borderRadius: 4,
+                    color: "#B91C1C",
+                    cursor: "pointer",
+                    padding: "8px 14px",
+                  }}
+                  type="button"
+                >
+                  Delete Batch
+                </button>
+              )}
+              {deleteError ? <span style={{ color: "#B91C1C" }}>{deleteError}</span> : null}
+            </div>
+          ) : null}
           {isConfirmed ? (
             <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", padding: 16 }}>
               Ready transactions are now available for the future Branch Assignment module. Manual review and invalid transactions remain in this batch and are excluded from the assignment queue.

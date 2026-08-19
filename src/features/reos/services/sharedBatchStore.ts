@@ -34,6 +34,33 @@ export async function saveSharedBatch(sharedBatch: SharedBatch): Promise<SharedB
   return sharedBatch;
 }
 
+/**
+ * The "I uploaded the wrong file" undo path (DEC-032) - removes an unassigned Shared
+ * Batch and its beneficiaries entirely from the live workflow. RLS enforces the same
+ * `assignment_status = 'UNASSIGNED'` guard server-side (assignSharedBatchToBranch's own
+ * lock check mirrored as a DELETE policy), so this can never remove a batch already
+ * handed to a branch, even if a caller somehow bypassed the client-side check.
+ *
+ * Deliberately does NOT touch the separate Import Intelligence ledger
+ * (import_batches/import_beneficiaries via importIntelligenceService) - that ledger is a
+ * durable evidence trail by design (IMPORT_INTELLIGENCE.md), meant to survive exactly
+ * this kind of live-workflow undo: "this file was uploaded and later removed" remains
+ * true and auditable even after the live batch is gone.
+ */
+export async function deleteSharedBatch(sharedBatchId: string): Promise<void> {
+  const { error: beneficiariesError } = await supabase.from("beneficiaries").delete().eq("shared_batch_id", sharedBatchId);
+
+  if (beneficiariesError) {
+    throw new Error(beneficiariesError.message);
+  }
+
+  const { error: batchError } = await supabase.from("shared_batches").delete().eq("id", sharedBatchId);
+
+  if (batchError) {
+    throw new Error(batchError.message);
+  }
+}
+
 export async function getSharedBatch(sharedBatchId: string): Promise<SharedBatch | null> {
   const { data, error } = await supabase.from("shared_batches").select("*").eq("id", sharedBatchId).maybeSingle();
 
