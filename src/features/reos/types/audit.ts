@@ -10,6 +10,7 @@ export type AuditAction =
   | "BATCH_DELETED"
   | "BATCH_ASSIGNED"
   | "BATCH_REASSIGNED"
+  | "BATCH_REQUESTED"
   | "TRANSACTION_STARTED"
   | "TRANSACTION_COMPLETED"
   | "TRANSACTION_RETURNED"
@@ -28,6 +29,7 @@ export type AuditAction =
 
 export type AuditEntityType =
   | "SHARED_BATCH"
+  | "BATCH_REQUEST"
   | "ASSIGNMENT"
   | "QUEUE_ITEM"
   | "BRANCH"

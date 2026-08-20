@@ -3,12 +3,14 @@ import { BranchAssignmentPanel } from "../components/BranchAssignmentPanel";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { recordAuditEvent } from "../services/auditService";
+import { cancelBatchRequest, getOpenBatchRequests } from "../services/batchRequestService";
 import { assignSharedBatchToBranch } from "../services/branchAssignmentService";
 import { getBranchById } from "../services/branchRegistryService";
 import { deleteSharedBatch, getAllSharedBatches, getBeneficiaries, saveAssignment, saveSharedBatch } from "../services/sharedBatchStore";
 import { useReosSession } from "../layout/reosAuthContext";
 import { colors, radius, spacing, typography } from "../theme";
 import type { Assignment } from "../types/assignment";
+import type { BatchRequest } from "../types/batchRequest";
 import type { Beneficiary } from "../types/beneficiary";
 import type { SharedBatch } from "../types/sharedBatch";
 
@@ -25,6 +27,9 @@ export function BranchAssignmentPage() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [openRequests, setOpenRequests] = useState<BatchRequest[]>([]);
+  const [dismissingRequestId, setDismissingRequestId] = useState<string | null>(null);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
 
   // Real, uploaded Shared Batches waiting for their initial assignment. Re-fetched after
   // every successful assignment (refreshSignal) so the just-assigned batch drops out of
@@ -43,6 +48,29 @@ export function BranchAssignmentPage() {
       .catch((cause: unknown) => {
         if (!cancelled) {
           setUnassignedError(cause instanceof Error ? cause.message : "Unable to load uploaded Shared Batches.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshSignal]);
+
+  // Branch Officers' "Request a Batch" worklist - reuses the same refreshSignal so a
+  // request disappears immediately once assignSharedBatchToBranch auto-resolves it
+  // (branchAssignmentService.ts) or it's dismissed below.
+  useEffect(() => {
+    let cancelled = false;
+
+    getOpenBatchRequests()
+      .then((requests) => {
+        if (!cancelled) {
+          setOpenRequests(requests);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setRequestsError(cause instanceof Error ? cause.message : "Unable to load open branch requests.");
         }
       });
 
@@ -127,12 +155,91 @@ export function BranchAssignmentPage() {
     }
   };
 
+  const handleDismissRequest = async (request: BatchRequest) => {
+    if (!session) {
+      return;
+    }
+
+    setDismissingRequestId(request.id);
+    setRequestsError(null);
+
+    try {
+      await cancelBatchRequest(request.id, session.userId);
+      setOpenRequests((current) => current.filter((entry) => entry.id !== request.id));
+    } catch (caughtError) {
+      setRequestsError(caughtError instanceof Error ? caughtError.message : "Unable to dismiss this request.");
+    } finally {
+      setDismissingRequestId(null);
+    }
+  };
+
   return (
     <PageContainer>
       <PageHeader
         description="Select an uploaded Shared Batch and assign it to a branch."
         title="Branch Assignment"
       />
+      {openRequests.length > 0 ? (
+        <div
+          style={{
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderLeft: `4px solid ${colors.warning}`,
+            borderRadius: radius.md,
+            padding: spacing.lg,
+          }}
+        >
+          <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Open Branch Requests</div>
+          <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+            A branch's queue is empty and they're waiting on a batch.
+          </div>
+          <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.md }}>
+            {openRequests.map((request) => (
+              <div
+                key={request.id}
+                style={{
+                  alignItems: "center",
+                  backgroundColor: colors.amber50,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: radius.sm,
+                  display: "flex",
+                  gap: spacing.sm,
+                  justifyContent: "space-between",
+                  padding: `${spacing.sm}px ${spacing.md}px`,
+                }}
+              >
+                <div>
+                  <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>
+                    {getBranchById(request.branchId)?.name ?? request.branchId}
+                  </div>
+                  <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
+                    {request.note ? `"${request.note}" - ` : ""}requested {new Date(request.createdAt).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  disabled={dismissingRequestId === request.id}
+                  onClick={() => handleDismissRequest(request)}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 4,
+                    color: colors.text,
+                    cursor: dismissingRequestId === request.id ? "not-allowed" : "pointer",
+                    flexShrink: 0,
+                    padding: "6px 12px",
+                  }}
+                  type="button"
+                >
+                  {dismissingRequestId === request.id ? "Dismissing..." : "Dismiss"}
+                </button>
+              </div>
+            ))}
+          </div>
+          {requestsError ? (
+            <div style={{ color: "#B91C1C", fontSize: typography.small, marginTop: spacing.sm }}>{requestsError}</div>
+          ) : null}
+        </div>
+      ) : null}
       <div
         style={{
           backgroundColor: colors.surface,

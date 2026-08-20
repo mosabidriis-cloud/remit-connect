@@ -1,5 +1,6 @@
 import { createAssignment } from "./assignmentService";
 import { recordAuditEvent } from "./auditService";
+import { resolveOpenBatchRequestForBranch } from "./batchRequestService";
 import { notifyBranchOfficersOfBatchAssignment } from "./notificationService";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
@@ -76,6 +77,13 @@ export async function assignSharedBatchToBranch(input: AssignSharedBatchInput): 
   // Never throws - a failed notification must not block the assignment itself (same
   // non-blocking-additive-persistence rule recordAuditEvent above follows).
   await notifyBranchOfficersOfBatchAssignment(assignment);
+
+  // Closes the "Request a Batch" loop automatically the moment a batch actually reaches
+  // the requesting branch - never throws, same non-blocking rule as the notification above.
+  await resolveOpenBatchRequestForBranch(input.branchId, {
+    actorUserId: input.assignedByUserId,
+    fulfilledBySharedBatchId: input.sharedBatch.id,
+  });
 
   return {
     sharedBatch: {

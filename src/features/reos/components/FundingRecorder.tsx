@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { DataTable } from "./common/DataTable";
 import { EmptyState } from "./common/EmptyState";
 import { getFundingEventsByBranch, getPayoutAccountsByBranch, recordFunding } from "../services/liquidityService";
-import { colors, radius, spacing, typography } from "../theme";
+import { getDisplayNamesByIds } from "../services/userService";
+import { colors, radius, shadows, spacing, typography } from "../theme";
 import type { FundingEvent, PayoutAccount } from "../types/liquidity";
 
 type FundingRecorderProps = {
@@ -24,6 +25,7 @@ export function FundingRecorder({ branchId, actorUserId, onChange, refreshSignal
   const [notes, setNotes] = useState("");
   const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
   const [history, setHistory] = useState<FundingEvent[]>([]);
+  const [recordedByNames, setRecordedByNames] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -31,8 +33,17 @@ export function FundingRecorder({ branchId, actorUserId, onChange, refreshSignal
     Promise.all([getPayoutAccountsByBranch(branchId), getFundingEventsByBranch(branchId)]).then(
       ([nextAccounts, nextHistory]) => {
         if (!cancelled) {
+          const sortedHistory = [...nextHistory].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
           setAccounts(nextAccounts.filter((account) => account.status === "ACTIVE"));
-          setHistory([...nextHistory].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt)));
+          setHistory(sortedHistory);
+
+          getDisplayNamesByIds(sortedHistory.map((event) => event.updatedByUserId))
+            .then((names) => {
+              if (!cancelled) {
+                setRecordedByNames(names);
+              }
+            })
+            .catch(() => undefined);
         }
       },
     );
@@ -66,7 +77,7 @@ export function FundingRecorder({ branchId, actorUserId, onChange, refreshSignal
 
   return (
     <div style={{ display: "grid", gap: spacing.lg }}>
-      <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}>
+      <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, padding: spacing.lg }}>
         <div style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Record Funding Received</div>
         <p style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>
           Funding happens outside REOS - this records that it already arrived. No approval, no pending state.
@@ -137,7 +148,7 @@ export function FundingRecorder({ branchId, actorUserId, onChange, refreshSignal
         ) : null}
       </div>
 
-      <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.lg }}>
+      <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.lg, boxShadow: shadows.sm, padding: spacing.lg }}>
         <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Funding History</div>
         {history.length === 0 ? (
           <div style={{ marginTop: spacing.md }}>
@@ -151,7 +162,7 @@ export function FundingRecorder({ branchId, actorUserId, onChange, refreshSignal
                 { key: "accounts", header: "Accounts Funded", render: (event: FundingEvent) => String(event.entries.length) },
                 { key: "totalAmount", header: "Total Amount", align: "right", render: (event: FundingEvent) => event.totalAmount.toLocaleString() },
                 { key: "reference", header: "Reference", render: (event: FundingEvent) => event.reference ?? "-" },
-                { key: "updatedBy", header: "Recorded By", render: (event: FundingEvent) => event.updatedByUserId },
+                { key: "updatedBy", header: "Recorded By", render: (event: FundingEvent) => recordedByNames.get(event.updatedByUserId) ?? "Unknown" },
               ]}
               getRowKey={(event: FundingEvent) => event.id}
               rows={history}

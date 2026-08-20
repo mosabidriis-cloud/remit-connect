@@ -59,6 +59,28 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 /**
+ * Batched id -> full name lookup for "who did this" display columns (Funding History,
+ * audit-style tables) - one query instead of one per row. RLS still applies per-row
+ * (profiles_select_self_or_admin/profiles_select_branch_officers etc.), so an id the
+ * caller isn't allowed to see is simply absent from the returned map, not an error.
+ */
+export async function getDisplayNamesByIds(ids: readonly string[]): Promise<Map<string, string>> {
+  const uniqueIds = [...new Set(ids)];
+
+  if (uniqueIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase.from("profiles").select("id, full_name").in("id", uniqueIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map((data ?? []).map((row) => [row.id, row.full_name]));
+}
+
+/**
  * `actorUserId` is separate from `input` - it identifies who is performing the creation
  * (for the audit trail only), not the account being created. Always the acting
  * Operations Manager's own session id; the bootstrap "first user" path never calls this

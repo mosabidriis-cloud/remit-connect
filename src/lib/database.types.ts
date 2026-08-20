@@ -106,6 +106,42 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_requests: {
+        Row: {
+          branch_id: string
+          created_at: string
+          fulfilled_by_shared_batch_id: string | null
+          id: string
+          note: string | null
+          requested_by_user_id: string
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          status: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          fulfilled_by_shared_batch_id?: string | null
+          id: string
+          note?: string | null
+          requested_by_user_id: string
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          fulfilled_by_shared_batch_id?: string | null
+          id?: string
+          note?: string | null
+          requested_by_user_id?: string
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       beneficiaries: {
         Row: {
           account_number: string | null
@@ -179,6 +215,10 @@ export type Database = {
           completed_at: string | null
           completed_by_user_id: string | null
           created_at: string
+          held_at: string | null
+          held_by_user_id: string | null
+          hold_comment: string | null
+          hold_reason_id: string | null
           id: string
           payout_account_id: string | null
           return_comment: string | null
@@ -195,6 +235,10 @@ export type Database = {
           completed_at?: string | null
           completed_by_user_id?: string | null
           created_at?: string
+          held_at?: string | null
+          held_by_user_id?: string | null
+          hold_comment?: string | null
+          hold_reason_id?: string | null
           id: string
           payout_account_id?: string | null
           return_comment?: string | null
@@ -211,6 +255,10 @@ export type Database = {
           completed_at?: string | null
           completed_by_user_id?: string | null
           created_at?: string
+          held_at?: string | null
+          held_by_user_id?: string | null
+          hold_comment?: string | null
+          hold_reason_id?: string | null
           id?: string
           payout_account_id?: string | null
           return_comment?: string | null

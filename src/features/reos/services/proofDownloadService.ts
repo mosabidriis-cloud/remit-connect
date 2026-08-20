@@ -34,31 +34,42 @@ export async function buildProofDownloadBatchFromSharedBatch(sharedBatch: Shared
   );
 
   const branchQueueItems = await getBranchProcessingQueue(sharedBatch.assignedBranchId);
+  const assignedQueueItems = branchQueueItems.filter((item) => assignmentIds.has(item.assignmentId));
 
-  const transactions: CreditToAccountTransaction[] = branchQueueItems
-    .filter((item) => assignmentIds.has(item.assignmentId))
-    .map((item) => ({
-      id: item.id,
-      beneficiary: item.beneficiary,
-      status: toTransactionStatus(item.status),
-      proofs: item.proofs,
-      completedByUserId: item.completedByUserId,
-      completedAt: item.completedAt,
-      returnedByUserId: item.returnedByUserId,
-      returnedAt: item.returnedAt,
-      returnReason: item.returnReason,
-      returnComment: item.returnComment,
-    }));
+  const transactions: CreditToAccountTransaction[] = assignedQueueItems.map((item) => ({
+    id: item.id,
+    beneficiary: item.beneficiary,
+    status: toTransactionStatus(item.status),
+    proofs: item.proofs,
+    completedByUserId: item.completedByUserId,
+    completedAt: item.completedAt,
+    returnedByUserId: item.returnedByUserId,
+    returnedAt: item.returnedAt,
+    returnReason: item.returnReason,
+    returnComment: item.returnComment,
+  }));
 
   return {
     id: sharedBatch.id,
     sharedBatchReference: sharedBatch.reference,
-    directRemitBatchReference: sharedBatch.reference,
     assignedBranchId: sharedBatch.assignedBranchId,
     lifecycleStatus: sharedBatch.lifecycleStatus,
     transactions,
-    completedByUserId: null,
-    completedAt: null,
+    // Sourced from the real 5-value BranchProcessingQueueStatus, not from `transactions`
+    // above - toTransactionStatus deliberately collapses ASSIGNED/IN_PROGRESS/ON_HOLD
+    // into PENDING for the download-eligibility decision (REPORTING_PROJECTION_LAYER.md
+    // 4.4: "the layer never maps up"), which would make on-hold work invisible to the
+    // Direct Remit Officer - the only role who never sees the OM-only Reports page.
+    onHoldTransactions: assignedQueueItems
+      .filter((item) => item.status === "ON_HOLD")
+      .map((item) => ({
+        transactionId: item.id,
+        directRemitReference: item.beneficiary.directRemitReference,
+        beneficiaryName: item.beneficiary.beneficiaryName,
+        holdReason: item.holdReason,
+        holdComment: item.holdComment,
+        heldAt: item.heldAt,
+      })),
     downloadedByUserId: null,
     downloadedAt: null,
   };
@@ -99,16 +110,13 @@ export function getBatchDownloadSummary(batch: ProofDownloadBatch): BatchDownloa
 
   return {
     sharedBatchReference: batch.sharedBatchReference,
-    directRemitBatchReference: batch.directRemitBatchReference,
     assignedBranchId: batch.assignedBranchId,
     transactionCount: batch.transactions.length,
     proofImageCount: downloadableProofs.length,
     completedTransactionCount: batch.transactions.filter((transaction) => transaction.status === "COMPLETED").length,
     returnedTransactionCount: batch.transactions.filter((transaction) => transaction.status === "RETURNED").length,
-    processingStatus: batch.lifecycleStatus,
-    downloadStatus: batch.lifecycleStatus,
-    completedByUserId: batch.completedByUserId,
-    completedAt: batch.completedAt,
+    onHoldTransactionCount: batch.onHoldTransactions.length,
+    lifecycleStatus: batch.lifecycleStatus,
     downloadedByUserId: batch.downloadedByUserId,
     downloadedAt: batch.downloadedAt,
   };
@@ -131,6 +139,9 @@ export function getDownloadableProofs(batch: ProofDownloadBatch): DownloadablePr
         .map((proof) => ({
           transactionId: transaction.id,
           directRemitReference: transaction.beneficiary.directRemitReference,
+          beneficiaryName: transaction.beneficiary.beneficiaryName,
+          currency: transaction.beneficiary.currency,
+          amount: transaction.beneficiary.amount,
           proof,
         })),
     );

@@ -4,9 +4,10 @@ import { recordAuditEvent } from "./auditService";
 import { deductForTransaction } from "./liquidityService";
 import { createSignedProofUrls, uploadProofOfPayment } from "./proofOfPaymentService";
 import { getAssignment, getBeneficiariesByIds, getSharedBatch, updateSharedBatchLifecycleStatus } from "./sharedBatchStore";
-import { defaultReturnReasons } from "./transactionProcessingService";
+import { defaultHoldReasons, defaultReturnReasons } from "./transactionProcessingService";
 import type { Assignment } from "../types/assignment";
 import type { Beneficiary } from "../types/beneficiary";
+import type { HoldReason } from "../types/holdReason";
 import type { ProofOfPayment } from "../types/proofOfPayment";
 import type { ReturnReason } from "../types/returnReason";
 
@@ -42,6 +43,10 @@ export interface BranchProcessingQueueItem {
   proofs: ProofOfPayment[];
   returnReason: ReturnReason | null;
   returnComment: string | null;
+  holdReason: HoldReason | null;
+  holdComment: string | null;
+  heldAt: string | null;
+  heldByUserId: string | null;
   /** When this item entered the branch's processing queue (row creation, ASSIGNED). */
   createdAt: string;
   /** Set once, on the first ASSIGNED/ON_HOLD -> IN_PROGRESS transition. Never reset. */
@@ -279,37 +284,46 @@ export async function startBranchProcessingQueueItem(
   return item;
 }
 
-export async function updateBranchProcessingQueueItemStatus(
+/**
+ * Mirrors returnBranchProcessingQueueItem's shape exactly: a predefined reason plus an
+ * optional comment, captured at the moment of the transition, so the Direct Remit
+ * Officer (who has no other way to see live processing detail - see
+ * proofDownloadService's onHoldTransactionCount doc comment) can see why, not just that,
+ * a transaction is paused.
+ */
+export async function putBranchProcessingQueueItemOnHold(
   itemId: string,
-  status: BranchProcessingQueueStatus,
+  holdReason: HoldReason,
+  comment: string,
   actorUserId: string,
-): Promise<BranchProcessingQueueItem | null> {
+): Promise<BranchProcessingQueueItem> {
   const row = await fetchQueueItemRow(itemId);
 
   if (!row) {
-    return null;
-  }
-
-  // COMPLETED and RETURNED require proof/return-reason gating and can only be reached
-  // through completeBranchProcessingQueueItem / returnBranchProcessingQueueItem.
-  // IN_PROGRESS requires a payout account and can only be reached through
-  // startBranchProcessingQueueItem (Liquidity Management, LIQUIDITY_MANAGEMENT.md
-  // Section 7.1) - this function is left handling ON_HOLD only.
-  if (status === "COMPLETED" || status === "RETURNED" || status === "IN_PROGRESS") {
-    return hydrateOne(row);
+    throw new Error("Transaction was not found in the processing queue.");
   }
 
   if ((await getBranchProcessingStatus(row.branch_id)) === "COMPLETED") {
-    return hydrateOne(row);
+    throw new Error("Processing session is locked. Queue is read-only.");
   }
 
-  if (!canTransitionToStatus(row.status as BranchProcessingQueueStatus, status)) {
-    return hydrateOne(row);
+  if (!canTransitionToStatus(row.status as BranchProcessingQueueStatus, "ON_HOLD")) {
+    throw new Error("This transaction cannot be put on hold from its current status.");
+  }
+
+  if (!holdReason.isActive) {
+    throw new Error("An active predefined Hold Reason is required.");
   }
 
   const { data, error } = await supabase
     .from("branch_processing_queue_items")
-    .update({ status })
+    .update({
+      status: "ON_HOLD",
+      held_at: new Date().toISOString(),
+      held_by_user_id: actorUserId,
+      hold_reason_id: holdReason.id,
+      hold_comment: comment || null,
+    })
     .eq("id", itemId)
     .select()
     .maybeSingle();
@@ -318,18 +332,20 @@ export async function updateBranchProcessingQueueItemStatus(
     throw new Error(error.message);
   }
 
-  const item = await hydrateOne(data ?? row);
-
-  if (status === "ON_HOLD") {
-    await recordAuditEvent({
-      actorUserId,
-      action: "TRANSACTION_ON_HOLD",
-      entityType: "QUEUE_ITEM",
-      entityId: itemId,
-      branchId: row.branch_id,
-      details: `Put transaction ${itemId} on hold.`,
-    });
+  if (!data) {
+    throw new Error("Unable to put transaction on hold.");
   }
+
+  const item = await hydrateOne(data);
+
+  await recordAuditEvent({
+    actorUserId,
+    action: "TRANSACTION_ON_HOLD",
+    entityType: "QUEUE_ITEM",
+    entityId: itemId,
+    branchId: row.branch_id,
+    details: `Put transaction ${itemId} on hold - ${holdReason.name}${comment ? `: ${comment}` : ""}.`,
+  });
 
   return item;
 }
@@ -677,6 +693,10 @@ function mapRowToQueueItem(row: QueueItemRow, beneficiary: Beneficiary, proofs: 
     proofs,
     returnReason: defaultReturnReasons.find((reason) => reason.id === row.return_reason_id) ?? null,
     returnComment: row.return_comment,
+    holdReason: defaultHoldReasons.find((reason) => reason.id === row.hold_reason_id) ?? null,
+    holdComment: row.hold_comment,
+    heldAt: row.held_at,
+    heldByUserId: row.held_by_user_id,
     createdAt: row.created_at,
     startedAt: row.started_at,
     completedAt: row.completed_at,

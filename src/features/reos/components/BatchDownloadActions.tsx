@@ -29,6 +29,11 @@ export function BatchDownloadActions({
         <div>
           <h2 style={{ color: colors.text, fontSize: typography.h3, fontWeight: 600 }}>Proof Downloads</h2>
           <p style={{ color: colors.muted, fontSize: typography.small }}>{proofImageCount} proof image(s) available.</p>
+          {lifecycleStatus !== "READY_FOR_DOWNLOAD" && lifecycleStatus !== "DOWNLOADED" ? (
+            <p style={{ color: colors.muted, fontSize: typography.caption, marginTop: spacing.xs }}>
+              Download ZIP and Mark as Downloaded unlock once every transaction in this batch is complete - individual proofs below are available now.
+            </p>
+          ) : null}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: spacing.sm }}>
           <button
@@ -65,7 +70,7 @@ export function BatchDownloadActions({
             }}
             type="button"
           >
-            Confirm
+            Mark as Downloaded
           </button>
         </div>
       </div>

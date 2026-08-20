@@ -1,3 +1,4 @@
+import type { HoldReason } from "./holdReason";
 import type { ProofOfPayment } from "./proofOfPayment";
 import type { SharedBatchLifecycleStatus } from "./sharedBatch";
 import type { CreditToAccountTransaction } from "./transactionProcessing";
@@ -6,31 +7,36 @@ export type ProofDownloadActorRole =
   | "DIRECT_REMIT_OFFICER"
   | "OPERATIONS_MANAGER";
 
+/** Sourced from the real BranchProcessingQueueStatus, not `transactions` below - see the doc comment on buildProofDownloadBatchFromSharedBatch. */
+export interface OnHoldTransaction {
+  transactionId: string;
+  directRemitReference: string;
+  beneficiaryName: string;
+  holdReason: HoldReason | null;
+  holdComment: string | null;
+  heldAt: string | null;
+}
+
 export interface ProofDownloadBatch {
   id: string;
   sharedBatchReference: string;
-  directRemitBatchReference: string;
   assignedBranchId: string;
   lifecycleStatus: SharedBatchLifecycleStatus;
   transactions: CreditToAccountTransaction[];
-  completedByUserId: string | null;
-  completedAt: string | null;
+  onHoldTransactions: OnHoldTransaction[];
   downloadedByUserId: string | null;
   downloadedAt: string | null;
 }
 
 export interface BatchDownloadSummary {
   sharedBatchReference: string;
-  directRemitBatchReference: string;
   assignedBranchId: string;
   transactionCount: number;
   proofImageCount: number;
   completedTransactionCount: number;
   returnedTransactionCount: number;
-  processingStatus: SharedBatchLifecycleStatus;
-  downloadStatus: SharedBatchLifecycleStatus;
-  completedByUserId: string | null;
-  completedAt: string | null;
+  onHoldTransactionCount: number;
+  lifecycleStatus: SharedBatchLifecycleStatus;
   downloadedByUserId: string | null;
   downloadedAt: string | null;
 }
@@ -59,5 +65,8 @@ export interface ProofDownloadRequest {
 export interface DownloadableProof {
   transactionId: string;
   directRemitReference: string;
+  beneficiaryName: string;
+  currency: string;
+  amount: number;
   proof: ProofOfPayment;
 }

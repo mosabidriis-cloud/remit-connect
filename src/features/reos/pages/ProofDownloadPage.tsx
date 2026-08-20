@@ -6,6 +6,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import { PageContainer } from "../components/common/PageContainer";
 import { PageHeader } from "../components/common/PageHeader";
 import { DownloadHistory } from "../components/DownloadHistory";
+import { OnHoldTransactionsPanel } from "../components/OnHoldTransactionsPanel";
 import { ProofDownloadPanel } from "../components/ProofDownloadPanel";
 import { useReosSession } from "../layout/reosAuthContext";
 import {
@@ -211,6 +212,7 @@ export function ProofDownloadPage() {
         proofs={downloadableProofs}
         onDownloadProof={handleDownloadProof}
       />
+      <OnHoldTransactionsPanel transactions={batch.onHoldTransactions} />
       <DownloadHistory history={history} />
     </PageContainer>
   );

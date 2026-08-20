@@ -196,6 +196,34 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
         </div>
       </div>
 
+      {/* The confirm action lives right next to the branch picker, not after the
+          Pending Ready Transactions list below - a batch can have hundreds of rows,
+          which used to push the button off-screen and force scrolling just to confirm. */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: spacing.lg }}>
+        <button
+          className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:hover:opacity-100"
+          disabled={!canConfirm || isReadOnly}
+          onClick={() => onConfirm(selectedBranchId)}
+          style={{
+            backgroundColor: canConfirm ? colors.primary : colors.slate200,
+            border: "none",
+            borderRadius: radius.md,
+            color: canConfirm ? colors.surface : colors.muted,
+            cursor: canConfirm ? "pointer" : "not-allowed",
+            padding: `${spacing.sm}px ${spacing.lg}px`,
+          }}
+          type="button"
+        >
+          {isReadOnly ? "Assignments Locked" : hasAssignments ? "Confirm Another Assignment" : "Confirm Assignment"}
+        </button>
+      </div>
+
+      {isAssignmentConfirmed ? (
+        <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", marginTop: spacing.lg, padding: 16 }}>
+          Assignment groups are now locked for this session. The batch contains {assignments.length} branch assignment group{assignments.length === 1 ? "" : "s"}.
+        </div>
+      ) : null}
+
       <div style={{ backgroundColor: colors.blue50, border: `1px solid ${colors.border}`, borderRadius: radius.sm, marginTop: spacing.lg, padding: spacing.md }}>
         <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>Assignment Summary</div>
         <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.xs }}>
@@ -234,7 +262,7 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
         {pendingReadyTransactions.length === 0 ? (
           <div style={{ color: colors.muted, fontSize: typography.small, marginTop: spacing.sm }}>All ready transactions are already assigned to a branch group.</div>
         ) : (
-          <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm }}>
+          <div style={{ display: "grid", gap: spacing.sm, marginTop: spacing.sm, maxHeight: 360, overflowY: "auto", paddingRight: spacing.xs }}>
             {pendingReadyTransactions.map((beneficiary) => (
               <div key={beneficiary.id} style={{ border: `1px solid ${colors.border}`, borderRadius: radius.sm, padding: `${spacing.sm}px ${spacing.md}px` }}>
                 <div style={{ color: colors.text, fontSize: typography.small, fontWeight: 600 }}>{beneficiary.directRemitReference}</div>
@@ -246,31 +274,6 @@ export function BranchAssignmentPanel({ beneficiaries, sharedBatch, assignment, 
           </div>
         )}
       </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: spacing.lg }}>
-        <button
-          className="transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-1 disabled:hover:opacity-100"
-          disabled={!canConfirm || isReadOnly}
-          onClick={() => onConfirm(selectedBranchId)}
-          style={{
-            backgroundColor: canConfirm ? colors.primary : colors.slate200,
-            border: "none",
-            borderRadius: radius.md,
-            color: canConfirm ? colors.surface : colors.muted,
-            cursor: canConfirm ? "pointer" : "not-allowed",
-            padding: `${spacing.sm}px ${spacing.lg}px`,
-          }}
-          type="button"
-        >
-          {isReadOnly ? "Assignments Locked" : hasAssignments ? "Confirm Another Assignment" : "Confirm Assignment"}
-        </button>
-      </div>
-
-      {isAssignmentConfirmed ? (
-        <div style={{ backgroundColor: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 8, color: "#065F46", marginTop: spacing.lg, padding: 16 }}>
-          Assignment groups are now locked for this session. The batch contains {assignments.length} branch assignment group{assignments.length === 1 ? "" : "s"}.
-        </div>
-      ) : null}
     </div>
   );
 }
